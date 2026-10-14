@@ -1,0 +1,13 @@
+{
+  "nx": 64,
+  "ny": 32,
+  "length": 2.0,
+  "height": 1.0,
+  "nu": 0.3,
+  "volume": 0.5,
+  "load_y": 0.5,
+  "load_span": 0.25,
+  "radius": 0.19,
+  "penal": 3.0,
+  "emin": 1e-06
+}

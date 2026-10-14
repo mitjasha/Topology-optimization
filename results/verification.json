@@ -1,0 +1,31 @@
+{
+  "tests_run": 19,
+  "failures": 0,
+  "errors": 0,
+  "test_output": "test_evaluation_rejects_changed_displacement (test_correlation.CorrelationInterface.test_evaluation_rejects_changed_displacement) ... ok\ntest_export_preserves_modulus_thickness_and_force (test_correlation.CorrelationInterface.test_export_preserves_modulus_thickness_and_force) ... ok\ntest_parser_requires_complete_independent_tables (test_correlation.CorrelationInterface.test_parser_requires_complete_independent_tables) ... ok\ntest_binary_reanalysis_does_not_filter (test_mesh_study.MeshAndBinary.test_binary_reanalysis_does_not_filter) ... ok\ntest_invalid_patch_is_rejected (test_mesh_study.MeshAndBinary.test_invalid_patch_is_rejected) ... ok\ntest_patch_load_resultant_and_centroid_across_meshes (test_mesh_study.MeshAndBinary.test_patch_load_resultant_and_centroid_across_meshes) ... ok\ntest_roundoff_is_tolerated_but_invalid_density_rejected (test_mesh_study.MeshAndBinary.test_roundoff_is_tolerated_but_invalid_density_rejected) ... ok\ntest_subdivision_preserves_physical_density_volume (test_mesh_study.MeshAndBinary.test_subdivision_preserves_physical_density_volume) ... ok\ntest_volume_projection_is_binary_and_budgeted (test_mesh_study.MeshAndBinary.test_volume_projection_is_binary_and_budgeted) ... ok\ntest_beam_refinement (test_verification.Verification.test_beam_refinement) ... ok\ntest_case_split_has_no_overlap (test_verification.Verification.test_case_split_has_no_overlap) ... ok\ntest_constant_strain_energy (test_verification.Verification.test_constant_strain_energy) ... ok\ntest_equilibrium_and_work (test_verification.Verification.test_equilibrium_and_work) ... ok\ntest_filtered_sensitivity_against_finite_difference (test_verification.Verification.test_filtered_sensitivity_against_finite_difference) ... ok\ntest_iteration_limit_is_not_called_convergence (test_verification.Verification.test_iteration_limit_is_not_called_convergence) ... ok\ntest_load_interpolation_and_filter (test_verification.Verification.test_load_interpolation_and_filter) ... ok\ntest_mirror_groups_have_no_leakage (test_verification.Verification.test_mirror_groups_have_no_leakage) ... ok\ntest_rigid_body_modes_and_symmetry (test_verification.Verification.test_rigid_body_modes_and_symmetry) ... ok\ntest_volume_and_objective_improvement (test_verification.Verification.test_volume_and_objective_improvement) ... ok\n\n----------------------------------------------------------------------\nRan 19 tests in 0.438s\n\nOK\n",
+  "solid_beam_refinement": [
+    {
+      "nx": 8,
+      "ny": 2,
+      "compliance": 236.42271386510396,
+      "beam_reference": 256,
+      "relative_difference_to_beam": -0.07647377396443766
+    },
+    {
+      "nx": 16,
+      "ny": 4,
+      "compliance": 258.7529879027445,
+      "beam_reference": 256,
+      "relative_difference_to_beam": 0.010753858995095733
+    },
+    {
+      "nx": 32,
+      "ny": 8,
+      "compliance": 265.65954430756295,
+      "beam_reference": 256,
+      "relative_difference_to_beam": 0.037732594951417786
+    }
+  ],
+  "legacy_blob_sha1": "de1cd4c85c7e1a118b14121b2e59ad1a14ab9f5b",
+  "note": "Numerical verification only; no external solver or experimental validation."
+}
