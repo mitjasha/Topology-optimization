@@ -1,99 +1,96 @@
-# Topology optimization with FEM verification and ML warm starts
+# Topology optimization · FEM + machine learning
 
-This repository investigates whether machine learning can reduce the computational effort needed to obtain a verified topology optimization solution. It includes a NumPy implementation of Q4 finite elements, SIMP, density filtering and optimality criteria, together with a supervised ridge baseline for predicting warm starts.
+[![Numerical verification](https://github.com/mitjasha/Topology-optimization/actions/workflows/verify.yml/badge.svg?branch=master)](https://github.com/mitjasha/Topology-optimization/actions/workflows/verify.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-The workflow is **early SIMP iterations → supervised prediction → FEM verification → OC refinement**. Results are evaluated by compliance, material volume, equilibrium and computational effort. Mesh studies, direct binary reanalysis and an independent CalculiX comparison provide additional numerical evidence.
+**Can a learned warm start reduce optimization effort without sacrificing structural performance?**
 
-The original 2019 U-Net and LinkNet notebook is preserved as historical work. The current solver and dataset form a separate reproducible research demonstrator.
+A reproducible CAE case study combining finite-element analysis, topology optimization and physics-checked machine learning. Start with the numerical evidence, inspect the assumptions, then reproduce the experiment on a CPU.
 
-> **Status: research demonstrator, foundation release.** The runnable implementation below is new; it does not reproduce the original 2019 dataset or neural-network scores. Its scope is deliberately small and its limitations are explicit. It is not qualified for safety-critical or manufacturing decisions.
+| Continuous-density reference | Projected binary candidate |
+|:---:|:---:|
+| ![Continuous-density cantilever, 48 by 24 elements](mesh_study/mesh_48x24_continuous.svg) | ![Projected binary cantilever, 64 by 32 elements](evidence_v2/refinement/binary_64.svg) |
+| Filtered SIMP, 50% material | Projection continuation, 50% material |
 
-## Start here
+*Two separate studies, with different meshes and optimization settings. These images illustrate the workflow; they are not a controlled before/after comparison or manufactured parts.*
 
-- **[Windows setup and run instructions](RUN_WINDOWS_EN.md)** — setup, commands and result interpretation. [Russian version](RUN_WINDOWS_RU.md).
-- [Mesh/binary study](docs/mesh-binary-study.md) and [visual report](mesh_study/report.html).
-- [Visual benchmark report](results/report.html) — download/open locally; GitHub displays HTML source.
-- [Measured results](results/test_results.csv), [experiment manifest](results/manifest.json), [verification evidence](results/verification.json).
-- [Engineering specification](docs/engineering-spec.md).
-- [Independent CalculiX correlation](docs/calculix-correlation.md) and [cross-solver report](correlation/report.html).
-- [Review of the historical notebook](docs/legacy-review.md).
-- [Portfolio development roadmap](docs/portfolio-roadmap-en.md). [Russian version](docs/portfolio-roadmap-ru.md).
-- [Historical notebook in English](20190505_Shakhrai_DS_Topology_Optimization.en.ipynb) — translated commentary and labels, with historical limitations explained.
+**Early FEM iterations → ridge / U-Net prediction → FEM checks → OC refinement → acceptance or full-solve fallback**
 
-## Extended verification
+[**Run on Windows**](RUN_WINDOWS_EN.md) · [**Инструкция на русском**](RUN_WINDOWS_RU.md) · [**Experiment protocol**](docs/development-v2.md) · [**Technical review**](docs/release-review-v2.md)
 
-The current version adds strict numerical gates in Windows/Linux CI, sparse FEM and filtering, smooth density projection, binary CalculiX reanalysis and a small U-Net comparison on a held-out aspect-ratio family. See [the complete protocol and commands](docs/development-v2.md). Fresh evidence is saved in [evidence_v2](evidence_v2).
+## Results at a glance
 
-The frozen-field study extends to 128×64 and still fails the mesh-independence gate. Two projected binary candidates pass the custom demonstrator gates. Independent binary comparisons retain thickness-dependent failures alongside thin-model agreement. The learning benchmark contains 84 cases, including 24 held-out geometry cases, three initialization seeds and three timing repeats. A learned warm start must demonstrate added value over the ridge baseline.
+The extended learning experiment uses **84 cases: 48 training, 12 validation and 24 held-out test cases**. The test family has a new rectangular aspect ratio, L/H = 2.5; all cases retain cantilever supports. Three network initialization seeds and three timing repeats give 216 evaluations per method, not 216 independent test problems.
 
-The current test suite contains 31 tests; the optional U-Net architecture test is skipped when PyTorch is absent. The original numerical results below are preserved from PR #1 at d3238f5. They are not regenerated by editing this documentation.
+| Method | Mean FEM solves per test run | Final quality gate |
+|---|---:|---:|
+| Uniform-start OC | 48.25 | 216 / 216 |
+| Ridge warm start + OC | **27.00** | 216 / 216 |
+| Small U-Net warm start + OC | 36.28 | 216 / 216 |
 
-## Preserved foundation evidence
+**Engineering decision:** retain ridge as the stronger baseline in this experiment. It uses about **44% fewer online FEM solves** than uniform-start OC; U-Net uses about **25% fewer**. These counts include early iterations, checks and refinement. Offline label generation and training are separate costs. Short CPU timings do not establish an industrial speedup.
 
-The checked-in run uses 24 load positions on one 16×8 cantilever mesh. Mirror-equivalent cases are kept in the same partition: **14 training cases / 4 validation cases / 6 test cases**, corresponding to **7 / 2 / 3 independent symmetry groups**. This is a tiny within-family benchmark, including held-out edge positions; it does not establish generalization to new geometries or boundary conditions.
+Source: [per-run results](evidence_v2/families/results.csv), [summary](evidence_v2/families/summary.json), [split, settings and provenance](evidence_v2/families/manifest.json).
 
-| Observation | Evidence from the foundation run |
+## What has been verified?
+
+| Engineering question | Evidence and conclusion |
 |---|---|
-| Direct prediction can be unacceptable | Worst direct compliance ≈1.244× the OC reference |
-| Refinement recovers performance in this test | All 6 held-out cases pass the defined continuous-density gate |
-| FEM effort is reduced in this test | 35–41 reference solves vs 23–26 hybrid solves |
-| Refined compliance | Approximately 0.991–0.992× reference; a different local solution, not proof of global optimality |
-| Binary reanalysis | 1/16 candidates passes the demonstrator gate; manufacturing readiness is not established |
-| Mesh independence | Not established: frozen-field compliance changes 5.42% on the final refinement |
-| Numerical checks | 19 automated checks, including binary and patch-load interfaces |
-| Independent solver comparison | CalculiX 2.23: three fields, compliance difference 0.17–0.27% in the thin-membrane limit; thickness diagnostic failures retained |
+| Does the numerical implementation behave consistently? | 31 tests cover equilibrium, energy, sensitivities, dense/sparse agreement, projection gradients, split isolation and failed acceptance gates. The optional network test requires PyTorch. |
+| Does another solver agree? | CalculiX binary comparisons at thickness 0.001 differ in compliance by about 0.175% and 0.083%. All eight runs at thickness 0.001 and 0.0001 pass; two of twelve total comparisons fail at thickness 0.01. [Evidence](evidence_v2/binary_correlation/summary.json). |
+| Are the results mesh independent? | **Not yet.** Frozen-field compliance still changes 2.387% at the final refinement to 128×64. [Study](evidence_v2/refinement/summary.json). |
+| Can a binary candidate pass the defined checks? | Two projected candidates pass volume, compliance, connectivity and void-stiffness sensitivity gates. This does not establish manufacturability. [Protocol](docs/development-v2.md). |
+| What happens when a prediction fails? | The extended benchmark executes and counts a full uniform-start solve when the runtime gate fails. The decision uses quantities available at runtime, not the held-out reference solution. |
 
-Wall-time measurements are available in the CSV. They are single-run, sub-second CPU timings on a dense reference backend, not a robust industrial speedup claim. Offline data-generation and training costs are reported separately. No claim is made that learning pays off for this small problem.
+This is a **research demonstrator** for linear plane-stress elasticity. Stress limits, buckling, fatigue, manufacturing constraints and industrial qualification are outside the demonstrated scope. Independent solver correlation is numerical verification, not experimental validation.
 
-## Reproduce
+## Reproduce in a few commands
 
-Tested with Python 3.12 and NumPy 2.3.5. No solver license, training download or GPU is required.
+Use Python 3.12. The core workflow needs NumPy and SciPy; it requires no GPU, solver license or historical dataset.
+
+```powershell
+git clone https://github.com/mitjasha/Topology-optimization.git
+cd Topology-optimization
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-reproduce.txt
+.\run_checks.cmd
+```
+
+Open `my_results/report.html` and `my_mesh_study/report.html` locally. The quick workflow runs tests, the strict 24-case ridge benchmark and the foundation mesh/binary study. It does **not** run the extended U-Net or external CalculiX experiments. For those, follow [the extended experiment commands](docs/development-v2.md); PyTorch and CalculiX are optional additional dependencies.
+
+On Linux/macOS, create and activate a Python 3.12 virtual environment, then:
 
 ```bash
-python -m venv .venv
-# Activate .venv using your operating system's command.
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-reproduce.txt
 python -m topopt.evidence --output my_results
 python -m topopt.mesh_study --output my_mesh_study
 ```
 
-To reproduce the checked-in numerical environment, install `requirements-reproduce.txt` instead. The broader requirements express intended compatibility, not a tested version matrix. GitHub Actions is configured for Windows/Linux verification; consult the PR checks for the hosted run status.
+GitHub Actions runs the core numerical verification on Windows and Linux. HTML reports must be opened locally; GitHub displays their source.
 
-The benchmark writes its own dataset, fitted ridge parameters, train/validation/test IDs, convergence history, source hashes, all test results and an HTML report. Run from the repository root. The historical notebook has separate, unavailable dependencies and is **not** part of this runnable path.
+## Engineering approach
 
-An independent CalculiX comparison is available via `python -m topopt.correlation --ccx /path/to/ccx --output correlation`. The solver is an external optional dependency. See the correlation method document for the essential thickness/formulation distinction. The package does not bundle the CalculiX executable.
+- **Mechanics:** bilinear Q4 elements, 2×2 Gauss integration, small-displacement isotropic plane stress, nondimensional E = 1 and unit thickness.
+- **Optimization:** minimum compliance, SIMP penalization, physical density filtering and OC updates; smooth projection continuation for the extended binary study.
+- **Implementation:** dense NumPy reference and sparse SciPy stiffness/filter backends, with comparison tests.
+- **Learning:** ridge and a small CPU U-Net; validation-based selection, grouped splits and a held-out aspect-ratio family.
+- **Acceptance:** convergence, physical volume, equilibrium and compliance; explicit fallback costs and preserved failures.
+- **Traceability:** datasets, split IDs, model weights, source snapshots, hashes, solver decks and per-run results.
 
-## Engineering model
+The case study demonstrates engineering judgment through model assumptions, measurable acceptance criteria, comparison with a simpler baseline and explicit limits on release readiness.
 
-- Linear isotropic plane stress; small displacement; nondimensional E=1 and unit thickness.
-- Bilinear Q4 elements with 2×2 Gauss integration.
-- Left-edge clamping; unit downward force distributed over adjacent right-edge nodes to represent a continuous load position.
-- Minimum compliance under a physical-density volume fraction of 0.5.
-- SIMP exponent 3, minimum modulus 10⁻⁶, normalized linear density filter.
-- OC updates with move limit 0.2 and design-variable lower bound 0.001.
-- Physical filter radius is fixed in geometry coordinates.
-- Dense NumPy reference backend and sparse SciPy backend with sparse stiffness assembly and spatial-neighbour density filtering.
+## Explore the repository
 
-The ML benchmark fields are filtered continuous densities. The separate mesh study reanalyzes binary fields without filtering. Neither is CAD geometry. No stress, buckling, fatigue, minimum-member-size guarantee, overhang constraint or mesh-independent optimized-design qualification is claimed.
-
-## Experiment design
-
-1. Generate independent FEM optimization trajectories and retain convergence status.
-2. Group mirror-equivalent cases before splitting; perform no augmentation.
-3. Learn a mapping from design variables after five OC updates to final design variables.
-4. Fit normalization only on training cases; select ridge regularization by validation compliance.
-5. Recompute early iterations for test cases and predict without reading their reference targets.
-6. Project predictions to the physical volume constraint; evaluate by FEM.
-7. Refine with the same OC algorithm and stopping rule as the reference.
-8. Report every test result, including failures; count early solves and final checks.
-
-The ridge model is an interpretable **supervised ML baseline**, not a neural network. It is included so that a future U-Net must demonstrate incremental engineering value over a simpler method.
-
-## Why this is a CAE leadership case study
-
-The project makes model assumptions, acceptance criteria, data lineage and release limitations reviewable. It includes a negative result (unsafe-to-accept direct prediction), traceable numerical checks, and a planned escalation path for failed predictions. A future production workflow would fall back to a full solve when a gate fails; that fallback is not implemented or timed here.
-
-This repository alone does not demonstrate leadership of people, industrial delivery, or nonlinear structural-analysis expertise. Those claims require separate professional evidence.
+| Path | Contents |
+|---|---|
+| [topopt/](topopt) | FEM, optimization, learning and verification code |
+| [tests/](tests) | Numerical and workflow regression tests |
+| [evidence_v2/](evidence_v2) | Extended experiments and frozen source snapshots |
+| [results/](results), [mesh_study/](mesh_study), [correlation/](correlation) | Preserved foundation evidence; distinct from the extended runs |
+| [Engineering specification](docs/engineering-spec.md) | Foundation assumptions and acceptance criteria |
+| [Development protocol](docs/development-v2.md) | Extended methods, commands and limitations |
+| [Historical notebook review](docs/legacy-review.md) | Context and reproducibility limits of the 2019 work |
+| [English historical notebook](20190505_Shakhrai_DS_Topology_Optimization.en.ipynb) | Translated companion to the unchanged original |
 
 ## Historical work and attribution
 

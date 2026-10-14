@@ -4,10 +4,10 @@
 
 Extract the project archive into a folder such as `C:\CAE\Topology-optimization`. The root should contain `README.md`, `requirements-reproduce.txt`, `run_checks.cmd` and the `topopt` directory.
 
-Until PR #1 is merged, use `portfolio/verification-first-cae` rather than `master`. Download that branch as a ZIP from GitHub or run:
+Download the default branch as a ZIP from GitHub or clone the repository:
 
 ```powershell
-git clone --branch portfolio/verification-first-cae --single-branch https://github.com/mitjasha/Topology-optimization.git
+git clone https://github.com/mitjasha/Topology-optimization.git
 cd Topology-optimization
 ```
 
@@ -28,7 +28,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-reproduce.txt
 ```
 
-The commands explicitly use the environment's Python, so activation and PowerShell ExecutionPolicy changes are unnecessary. The core dependency is NumPy 2.3.5. Installation needs internet access; the core calculations can then run offline. A GPU, Jupyter, paid solver licenses and the historical `X.npz` and `libtopology` files are unnecessary for this implementation.
+The commands explicitly use the environment's Python, so activation and PowerShell ExecutionPolicy changes are unnecessary. The core dependencies are NumPy 2.3.5 and SciPy 1.16.3. Installation needs internet access; the core calculations can then run offline. A GPU, Jupyter, paid solver licenses and the historical `X.npz` and `libtopology` files are unnecessary for this implementation.
 
 ## Run the complete workflow
 
@@ -38,7 +38,7 @@ The commands explicitly use the environment's Python, so activation and PowerShe
 
 The script runs automated tests, the ML benchmark, and the mesh and binary study. It stops on a program error and writes new results to `my_results` and `my_mesh_study`. Repeated runs overwrite those output folders. The checked-in evidence remains in `results` and `mesh_study`.
 
-The original preparation machine completed these tasks in seconds to tens of seconds; another CPU may take longer. The solver uses dense matrices. Keep several gigabytes of memory available and avoid increasing the mesh beyond 48×24 before introducing a sparse solver.
+The original preparation machine completed these tasks in seconds to tens of seconds; another CPU may take longer. The solver uses dense matrices. Keep several gigabytes of memory available and avoid increasing the mesh beyond 48×24 in this dense-backend workflow. The extended sparse experiments have separate commands in `docs/development-v2.md`.
 
 ```powershell
 Start-Process .\my_results\report.html
