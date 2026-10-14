@@ -60,7 +60,10 @@ def element_stiffness(hx, hy, nu):
 
 
 class Model:
-    def __init__(self, case):
+    def __init__(self, case, backend='dense'):
+        if backend not in ('dense', 'sparse'):
+            raise ValueError('Backend must be dense or sparse')
+        self.backend = backend
         self.case = case
         nx, ny = case.nx, case.ny
         self.ne = nx * ny
@@ -103,9 +106,21 @@ class Model:
         xx, yy = np.meshgrid((np.arange(nx)+0.5)*case.length/nx,
                              (np.arange(ny)+0.5)*case.height/ny)
         xy = np.c_[xx.ravel(), yy.ravel()]
-        dist = np.linalg.norm(xy[:, None, :]-xy[None, :, :], axis=2)
-        h = np.maximum(0, case.radius-dist)
-        self.filter = h / h.sum(axis=1, keepdims=True)
+        if backend == 'sparse':
+            from scipy.spatial import cKDTree
+            from scipy.sparse import csr_matrix, diags
+            neighbours = cKDTree(xy).query_ball_point(xy, case.radius)
+            rr, cc, weights = [], [], []
+            for row, indices in enumerate(neighbours):
+                indices = sorted(indices)
+                rr.extend([row]*len(indices)); cc.extend(indices)
+                weights.extend(np.maximum(0, case.radius-np.linalg.norm(xy[indices]-xy[row], axis=1)))
+            h = csr_matrix((weights, (rr, cc)), shape=(self.ne, self.ne))
+            self.filter = diags(1/np.asarray(h.sum(axis=1)).ravel()) @ h
+        else:
+            dist = np.linalg.norm(xy[:, None, :]-xy[None, :, :], axis=2)
+            h = np.maximum(0, case.radius-dist)
+            self.filter = h / h.sum(axis=1, keepdims=True)
         self.dv = self.filter.T @ np.ones(self.ne) / self.ne
 
     def physical(self, x):
@@ -132,10 +147,19 @@ class Model:
         rho = np.clip(rho,0,1)
         c = self.case
         modulus = c.emin+(1-c.emin)*rho**c.penal
-        k = np.zeros((self.nd, self.nd))
-        np.add.at(k, (self.rows, self.cols), (modulus[:, None, None]*self.ke).ravel())
+        data = (modulus[:, None, None]*self.ke).ravel()
         u = np.zeros(self.nd)
-        u[self.free] = np.linalg.solve(k[np.ix_(self.free, self.free)], self.f[self.free])
+        if self.backend == 'sparse':
+            from scipy.sparse import coo_matrix
+            from scipy.sparse.linalg import spsolve
+            k = coo_matrix((data, (self.rows, self.cols)), shape=(self.nd, self.nd)).tocsr()
+            u[self.free] = spsolve(k[self.free][:, self.free].tocsc(), self.f[self.free])
+        else:
+            k = np.zeros((self.nd, self.nd))
+            np.add.at(k, (self.rows, self.cols), data)
+            u[self.free] = np.linalg.solve(k[np.ix_(self.free, self.free)], self.f[self.free])
+        if not np.all(np.isfinite(u)):
+            raise RuntimeError('FEM solve produced non-finite displacements')
         residual = k@u-self.f
         ue = u[self.edof]
         energy = np.einsum('ei,ij,ej->e', ue, self.ke, ue)

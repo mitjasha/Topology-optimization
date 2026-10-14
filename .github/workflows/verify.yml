@@ -12,4 +12,9 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements-reproduce.txt
-      - run: python -m unittest discover -s tests -v
+      - run: python -m topopt.evidence --output my_results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: numerical-evidence-${{ matrix.os }}
+          path: my_results

@@ -9,3 +9,8 @@ correlation/*.12d
 correlation/*.sta
 correlation/*.cvg
 correlation/spooles.out
+evidence_v2/binary_correlation/*.frd
+evidence_v2/binary_correlation/*.12d
+evidence_v2/binary_correlation/*.sta
+evidence_v2/binary_correlation/*.cvg
+evidence_v2/binary_correlation/spooles.out

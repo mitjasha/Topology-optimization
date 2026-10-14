@@ -50,7 +50,7 @@ def connected_load_path(rho, model, threshold=0.5):
     return True
 
 
-def run(output, n_cases=24):
+def run(output, n_cases=24, backend='sparse'):
     output.mkdir(parents=True,exist_ok=True)
     # A symmetric cantilever at y and 1-y has an equivalent mirrored solution.
     # Keep both trajectories together, even though no augmentation is used.
@@ -62,7 +62,7 @@ def run(output, n_cases=24):
     settings={'max_iter':180,'tolerance':0.02,'min_iter':15}
     inputs=[]; targets=[]; references=[]; generation_start=perf_counter()
     for i,case in enumerate(cases):
-        result=optimize(Model(case),**settings)
+        result=optimize(Model(case,backend=backend),**settings)
         inputs.append(result['snapshots'][4])
         targets.append(result['x'])
         references.append(result)
@@ -79,7 +79,7 @@ def run(output, n_cases=24):
         reg=RidgeSurrogate(alpha).fit(inputs[usable_train],targets[usable_train])
         ratios=[]
         for i,pred in zip(usable_valid,reg.predict(inputs[usable_valid])):
-            m=Model(cases[i])
+            m=Model(cases[i],backend=backend)
             ratios.append(m.analyze(m.project_volume(pred))['compliance']/references[i]['compliance'])
         tuning.append({'alpha':alpha,'validation_mean_compliance_ratio':float(np.mean(ratios))})
     chosen=min(tuning,key=lambda item:item['validation_mean_compliance_ratio'])['alpha']
@@ -92,7 +92,7 @@ def run(output, n_cases=24):
                         train=reg.train,target_mean=reg.target_mean,weights=reg.weights,alpha=chosen)
     rows=[]
     for i in test:
-        start=perf_counter(); model=Model(cases[i]); setup_seconds=perf_counter()-start
+        start=perf_counter(); model=Model(cases[i],backend=backend); setup_seconds=perf_counter()-start
         # Recompute test early iterations; do not reuse the label-generation time.
         early=optimize(model,max_iter=5,tolerance=settings['tolerance'],min_iter=15)
         start=perf_counter()
@@ -113,6 +113,7 @@ def run(output, n_cases=24):
              'early_compliance_ratio':early['compliance']/reference['compliance'],
              'direct_compliance_ratio':direct['compliance']/reference['compliance'],
              'hybrid_compliance_ratio':ratio,'reference_converged':reference['converged'],
+             'hybrid_equilibrium_error':warm['equilibrium_error'],
              'hybrid_converged':warm['converged'],'quality_gate_pass':gate,
              'reference_fe_solves':reference['fe_solves'],
              'hybrid_fe_solves':early['fe_solves']+1+warm['fe_solves'],
@@ -131,7 +132,7 @@ def run(output, n_cases=24):
                    for p in sorted(Path(__file__).parent.glob('*.py'))}
     metadata={'experiment':'small-family load-position holdout baseline; not a production qualification',
               'seed':3017,'python':platform.python_version(),'numpy':np.__version__,
-              'platform':platform.platform(),'solver':'dense NumPy Q4 plane-stress',
+              'platform':platform.platform(),'solver':backend+' Q4 plane-stress',
               'cases':[asdict(c) for c in cases], 'split':{k:v.tolist() for k,v in split.items()},
               'group_ids':groups.tolist(), 'group_definition':'mirror pair y/H and 1-y/H',
               'usable_train_ids':usable_train.tolist(),'usable_validation_ids':usable_valid.tolist(),
@@ -144,6 +145,7 @@ def run(output, n_cases=24):
     print(json.dumps({'test_cases':len(rows),'quality_gate_passes':sum(r['quality_gate_pass'] for r in rows),
                       'median_speedup':float(np.median([r['speedup'] for r in rows])),
                       'max_compliance_ratio':max(r['hybrid_compliance_ratio'] for r in rows)},indent=2))
+    return rows
 
 
 def report(output,rows,metadata):
@@ -171,13 +173,21 @@ body{font:16px/1.6 system-ui,sans-serif;color:#193042;background:#eef2f4;margin:
     html+=f'<section><h2>Measured outcome</h2><p><b>{sum(r["quality_gate_pass"] for r in rows)}/{len(rows)} quality gates passed</b>, from {test_groups} independent symmetry groups. Worst direct prediction: {max(r["direct_compliance_ratio"] for r in rows):.3f}× reference compliance. Refinement is essential for the weakest predictions.</p><p>Geometry: L/H=2, left edge clamped, downward unit load on the right edge. Volume fraction=0.5. Black=solid (ρ=1), white=void (ρ=0), gray=intermediate density.</p></section>'
     html+=f'<p>Offline dataset generation: {metadata["generation_seconds"]:.1f} s. Training and validation sweep: {metadata["training_and_tuning_seconds"]:.2f} s. Selected ridge α={metadata["chosen_alpha"]}.</p>'
     html+=''.join(cards)
-    html+='''<section><h2>What this does not establish</h2><p>No new geometry family, 3D, nonlinear material, contact, fatigue, manufacturing constraint, binary reanalysis or commercial-solver correlation is included. Timing is single-run CPU on a dense reference backend. Dataset generation/training is offline and its amortization must be considered before deployment. A failed quality gate requires investigation or a full reference solve; fallback timing has not been measured.</p></section></main></html>'''
+    html+='''<section><h2>What this does not establish</h2><p>No new geometry family, 3D, nonlinear material, contact, fatigue, manufacturing constraint, binary reanalysis or commercial-solver correlation is included. Timing is single-run CPU on a reference FEM backend. Dataset generation/training is offline and its amortization must be considered before deployment. A failed quality gate requires investigation or a full reference solve; fallback timing has not been measured.</p></section></main></html>'''
     (output/'report.html').write_text(html,encoding='utf-8')
 
 
-if __name__=='__main__':
+def main(argv=None):
     parser=argparse.ArgumentParser()
     parser.add_argument('--output',type=Path,default=Path('results'))
     parser.add_argument('--cases',type=int,default=24)
-    args=parser.parse_args()
-    run(args.output,args.cases)
+    parser.add_argument('--backend',choices=('dense','sparse'),default='sparse')
+    parser.add_argument('--strict',action='store_true',help='Return exit code 2 if any numerical gate fails')
+    args=parser.parse_args(argv)
+    rows=run(args.output,args.cases,args.backend)
+    if args.strict and not all(r['quality_gate_pass'] for r in rows):
+        raise SystemExit(2)
+
+
+if __name__=='__main__':
+    main()

@@ -20,7 +20,7 @@ LIMITS = {'compliance_relative':0.01,'displacement_relative_l2':0.01,
           'reaction_relative_l2':0.05,'force_balance_absolute':1e-5}
 
 
-def write_deck(path, model, design, thickness):
+def write_deck(path, model, design, thickness, physical_density=False):
     """Same membrane stiffness E*t, Poisson ratio, nodes, load and in-plane BCs.
 
     Thickness sensitivity is required because CCX expands CPS4 to C3D8.
@@ -29,7 +29,10 @@ def write_deck(path, model, design, thickness):
     if not np.isfinite(thickness) or thickness<=0:
         raise ValueError('Thickness must be positive and finite')
     c=model.case
-    rho=model.physical(design)
+    rho=np.asarray(design).reshape(model.ne) if physical_density else model.physical(design)
+    if not np.all(np.isfinite(rho)) or np.any(rho<0) or np.any(rho>1+1e-12):
+        raise ValueError('Invalid exported density')
+    rho=np.clip(rho,0,1)
     moduli=(c.emin+(1-c.emin)*rho**c.penal)/thickness
     lines=['*HEADING','Independent Q4/SIMP correlation; linear static; unit membrane stiffness',
            '** CPS4 expanded internally; E*t is preserved. No nonlinear geometry.', '*NODE,NSET=NALL']
@@ -79,8 +82,8 @@ def parse_dat(path, node_count):
     return result
 
 
-def evaluate(model, design, parsed):
-    reference=model.analyze(design)
+def evaluate(model, design, parsed, physical_density=False):
+    reference=model.analyze_density(design) if physical_density else model.analyze(design)
     u=parsed['u'][:,:2].ravel()
     reactions=parsed['rf'][:,:2].ravel()[model.fixed]
     compliance=float(model.f@u)
@@ -132,7 +135,7 @@ def run(ccx,output):
     with (output/'results.csv').open('w',newline='',encoding='utf-8') as stream:
         writer=csv.DictWriter(stream,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
     meta={'solver_banners':sorted(set(banners)),'executable_sha256':hashlib.sha256(ccx.read_bytes()).hexdigest(),
-          'download_source':'https://www.dhondt.de/calculix_2.23_4win.zip',
+          'download_source':None,
           'python':platform.python_version(),'numpy':np.__version__,'limits':LIMITS,
           'input_cases':case_info,'optimized_reference_converged':opt['converged'],
           'source_hashes':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (Path(__file__),Path(__file__).with_name('solver.py'))},
@@ -164,7 +167,7 @@ def write_report(output,rows,metadata):
 <title>CalculiX correlation — topology optimization</title><style>
 body{font:16px/1.65 system-ui,sans-serif;color:#173145;background:#edf2f5;margin:0}main{max-width:1100px;margin:auto;padding:36px 24px}h1{font-size:36px;line-height:1.2}section{background:white;padding:24px;margin:20px 0;border-radius:12px;border:1px solid #d6e1e7}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;text-align:left;border-bottom:1px solid #ddd}.scroll{overflow-x:auto}.pass{color:#176742;font-weight:bold}.fail{color:#a44122;font-weight:bold}a{color:#006f87}aside{background:#fff3df;padding:18px;border-left:4px solid #c88b32}
 </style><main><p>CAE VERIFICATION · INDEPENDENT SOLVER</p><h1>Does the NumPy FEM agree with CalculiX?</h1>
-<p>CalculiX 2.23 · CPS4 · linear statics · three density fields · three thickness settings</p>
+<p>CPS4 · linear statics · three density fields · three thickness settings; see manifest for the actual solver version.</p>
 <section><h2>Decision</h2><p>'''+decision+'''</p><p>'''+diagnostic+'''</p></section>
 <aside><b>This is cross-solver verification, not experimental validation.</b> It supports the linear membrane implementation on three cases at one mesh and load position. It does not qualify strength, nonlinear response, manufacturing geometry, or all ML predictions.</aside>
 <section><h2>Results, including failed diagnostics</h2><div class="scroll"><table><thead><tr><th>Density field</th><th>Thickness</th><th>Compliance error</th><th>Displacement L2</th><th>Reaction L2</th><th>Force balance</th><th>Gate</th></tr></thead><tbody>'''+table+'''</tbody></table></div></section>

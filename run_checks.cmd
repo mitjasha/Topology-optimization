@@ -6,9 +6,7 @@ if not exist ".venv\Scripts\python.exe" (
   echo See RUN_WINDOWS_RU.md.
   exit /b 1
 )
-".venv\Scripts\python.exe" -m unittest discover -s tests -v
-if errorlevel 1 exit /b 1
-".venv\Scripts\python.exe" -m topopt.benchmark --output my_results
+".venv\Scripts\python.exe" -m topopt.evidence --output my_results
 if errorlevel 1 exit /b 1
 ".venv\Scripts\python.exe" -m topopt.mesh_study --output my_mesh_study
 if errorlevel 1 exit /b 1

@@ -1,0 +1,23 @@
+name: Extended research experiments
+on:
+  workflow_dispatch:
+jobs:
+  experiments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-reproduce.txt
+      - run: pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m topopt.refinement --output my_refinement
+      - run: python -m topopt.families --output my_families --strict
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extended-numerical-evidence
+          path: |
+            my_refinement
+            my_families
