@@ -1,0 +1,5 @@
+# Preserve bytes so recorded source/input hashes are stable on Windows/Linux.
+* -text whitespace=cr-at-eol
+# Fixed-format solver output is retained verbatim.
+correlation/*.dat whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof
+correlation/*.log whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof

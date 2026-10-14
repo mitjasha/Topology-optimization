@@ -1,0 +1,67 @@
+{
+  "python": "3.12.14",
+  "numpy": "2.3.5",
+  "cases": [
+    {
+      "nx": 8,
+      "ny": 4,
+      "length": 2.0,
+      "height": 1.0,
+      "nu": 0.3,
+      "volume": 0.5,
+      "load_y": 0.5,
+      "load_span": 0.25,
+      "radius": 0.19,
+      "penal": 3.0,
+      "emin": 1e-06
+    },
+    {
+      "nx": 16,
+      "ny": 8,
+      "length": 2.0,
+      "height": 1.0,
+      "nu": 0.3,
+      "volume": 0.5,
+      "load_y": 0.5,
+      "load_span": 0.25,
+      "radius": 0.19,
+      "penal": 3.0,
+      "emin": 1e-06
+    },
+    {
+      "nx": 32,
+      "ny": 16,
+      "length": 2.0,
+      "height": 1.0,
+      "nu": 0.3,
+      "volume": 0.5,
+      "load_y": 0.5,
+      "load_span": 0.25,
+      "radius": 0.19,
+      "penal": 3.0,
+      "emin": 1e-06
+    },
+    {
+      "nx": 48,
+      "ny": 24,
+      "length": 2.0,
+      "height": 1.0,
+      "nu": 0.3,
+      "volume": 0.5,
+      "load_y": 0.5,
+      "load_span": 0.25,
+      "radius": 0.19,
+      "penal": 3.0,
+      "emin": 1e-06
+    }
+  ],
+  "source_sha256": {
+    "benchmark.py": "b015f8cd0afb8fe19dbc6b5970f41f9f2a0b27b2c06f46b369142b9a3a9f1153",
+    "correlation.py": "5286ec84c48fcfd786af8112b90afef577615434caafaaf3cd63649ade4c6374",
+    "learning.py": "f62bdc2687e7cffe3a026dc1dee3b21c77dfe3136bf5e2cdbfd5300e43263a2d",
+    "mesh_study.py": "aaaa2d8cbe229b78893304dab82fdfbba63ea80842fd4e5b0aa222abd318de07",
+    "solver.py": "5e6dbbfcc6d2c0eb6c5331e4a77cb3a04678a24e36bfe9da3b86fc49da00cabb",
+    "__init__.py": "a400f5532b50aa1b4147ad08c2a8991977b9285a4b555c001a1ba92541918b1c"
+  },
+  "interpretation": "Frozen field tests FEM refinement; reoptimization also changes the design space. Four meshes do not prove mesh independence. The 8x4 filter radius is below one element width and acts as identity."
+}

@@ -1,0 +1,45 @@
+{
+  "meshes": [
+    [
+      8,
+      4
+    ],
+    [
+      16,
+      8
+    ],
+    [
+      32,
+      16
+    ],
+    [
+      48,
+      24
+    ]
+  ],
+  "physical_radius": 0.19,
+  "load_y": 0.5,
+  "load_span": 0.25,
+  "stopping": {
+    "max_iter": 240,
+    "tolerance": 0.01,
+    "min_iter": 20
+  },
+  "thresholds": [
+    0.3,
+    0.5,
+    0.7
+  ],
+  "binary_gate": {
+    "max_compliance_ratio": 1.05,
+    "max_volume": 0.5,
+    "requires_connected_path": true,
+    "max_void_modulus_sensitivity": 0.01,
+    "requires_converged_parent": true
+  },
+  "void_moduli": [
+    1e-06,
+    1e-08
+  ],
+  "note": "Gates fixed before analysis. Not manufacturing qualification."
+}

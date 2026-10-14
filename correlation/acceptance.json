@@ -1,0 +1,6 @@
+{
+  "compliance_relative": 0.01,
+  "displacement_relative_l2": 0.01,
+  "reaction_relative_l2": 0.05,
+  "force_balance_absolute": 1e-05
+}
