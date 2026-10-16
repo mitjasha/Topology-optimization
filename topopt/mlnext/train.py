@@ -30,7 +30,8 @@ def volume_project_torch(x, model):
         for _ in range(45):
             mid = (lo + hi) / 2
             trial = (x.detach() + mid).clamp(.001, 1)
-            if (filt @ trial).mean() > model.case.volume:
+            mask = torch.as_tensor(model.domain, dtype=trial.dtype, device=trial.device)
+            if ((filt @ trial) * mask).mean() > model.case.volume:
                 hi = mid
             else:
                 lo = mid
@@ -41,7 +42,8 @@ def volume_project_torch(x, model):
 def differentiable_compliance(x, model):
     """Dense differentiable FEM; opt-in small-mesh training loss, not a faster solver."""
     projected, filt = volume_project_torch(x, model)
-    rho = filt @ projected
+    mask = torch.as_tensor(model.domain, dtype=projected.dtype, device=projected.device)
+    rho = (filt @ projected) * mask
     case = model.case
     moduli = case.emin + (1 - case.emin) * rho.pow(case.penal)
     ke = torch.as_tensor(model.ke, dtype=rho.dtype, device=rho.device)
