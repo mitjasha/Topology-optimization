@@ -8,13 +8,17 @@ from __future__ import annotations
 import csv
 import json
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from .gui_backend import (
+if str(Path(__file__).resolve().parents[2]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from topopt.mlnext.gui_backend import (
     EXPERIMENTS, ROOT, RUNS, TRAINABLE, GENERATIVE,
     active_runs, checkpoints, comparison_task, dataset_info, dataset_task,
     datasets, diffusion_eval_task, diffusion_task, fem_eval_task, fem_task,
@@ -326,7 +330,7 @@ def view_density(path):
             density = (early if field == "early" else targets)[idx]
             st.caption(f"{tr('sample_split')}: {splits[idx]} · {density.shape[1]} × {density.shape[0]}")
             st.image(np.flipud(np.uint8(np.clip(density, 0, 1) * 255)),
-                     clamp=True, width="stretch")
+                     clamp=True, width=680)
     except (OSError, ValueError, KeyError) as exc:
         st.warning(str(exc))
 
@@ -582,6 +586,7 @@ def results_page():
                 view_density(ds)
 
 
+@st.fragment(run_every="5s")
 def runs_page():
     heading("runs", "runs_desc")
     if st.button("↻ " + tr("refresh")):
