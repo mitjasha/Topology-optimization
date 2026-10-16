@@ -150,12 +150,16 @@ if __name__ == "__main__":
     t.add_argument("--dataset", default="artifacts/mlnext/dataset.npz")
     t.add_argument("--output", default="artifacts/mlnext/fem")
     t.add_argument("--epochs", type=int, default=300)
+    t.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     e = sub.add_parser("evaluate")
     e.add_argument("--dataset", default="artifacts/mlnext/dataset.npz")
     e.add_argument("--checkpoint", required=True)
+    e.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     e.add_argument("--output", default="artifacts/mlnext/fem_eval.json")
     a = p.parse_args()
     if a.action == "train":
-        print(json.dumps(train(a.dataset, a.output, epochs=a.epochs), indent=2))
+        print(json.dumps(train(a.dataset, a.output, epochs=a.epochs,
+                               device=a.device), indent=2))
     else:
-        print(json.dumps(evaluate(a.dataset, a.checkpoint, a.output), indent=2))
+        print(json.dumps(evaluate(a.dataset, a.checkpoint, a.output,
+                                  device=a.device), indent=2))
