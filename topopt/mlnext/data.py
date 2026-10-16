@@ -181,7 +181,7 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
         analysis = model.analyze(ref["x"])
         arrays["features"].append(cell_features(problem, model, early))
         arrays["targets"].append(ref["x"].reshape(ny, nx).astype("float32"))
-        arrays["nodal"].append(nodal_features(model, ref["x"]))
+        arrays["nodal"].append(nodal_features(model, model.physical(ref["x"])))
         arrays["displacements"].append(analysis["displacement"].reshape(ny + 1, nx + 1, 2)
                                         .transpose(2, 0, 1).astype("float32"))
         arrays["reference_compliance"].append(ref["compliance"])
