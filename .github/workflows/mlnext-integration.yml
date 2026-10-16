@@ -1,5 +1,13 @@
 name: Scientific ML integration
 on:
+  push:
+    branches:
+      - feature/scientific-ml-suite
+    paths:
+      - 'topopt/mlnext/**'
+      - 'scripts/mlnext_experiment.py'
+      - 'requirements-mlnext.txt'
+      - '.github/workflows/mlnext-integration.yml'
   pull_request:
     paths:
       - 'topopt/mlnext/**'
