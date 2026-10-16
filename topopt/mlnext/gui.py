@@ -53,6 +53,7 @@ EN = {
     "usable": "Converged cases", "requested": "Requested cases",
     "train_desc": "Train a warm-start predictor from scratch using an existing FEM dataset.",
     "model": "Architecture", "epochs": "Maximum epochs",
+    "lr": "Learning rate", "device": "Compute device",
     "patience": "Early-stopping patience", "batch": "Batch size",
     "physics": "Differentiable compliance loss weight", "physics_warn":
         "Physics loss uses dense differentiable FEM and is limited to 512 elements.",
@@ -130,6 +131,7 @@ RU = {
     "usable": "Сошедшихся задач", "requested": "Запрошено задач",
     "train_desc": "Обучение нейросетевой модели warm start на выбранном FEM-датасете.",
     "model": "Архитектура", "epochs": "Максимальное число эпох",
+    "lr": "Скорость обучения", "device": "Вычислительное устройство",
     "patience": "Ожидание до early stopping", "batch": "Размер батча",
     "physics": "Вес дифференцируемого compliance loss", "physics_warn":
         "Физический loss использует плотный дифференцируемый FEM и ограничен сетками до 512 элементов.",
@@ -244,6 +246,14 @@ def checkpoint_choices(architecture, key):
                         key=key, format_func=lambda p: str(p.relative_to(EXPERIMENTS)))
 
 
+def device_options():
+    try:
+        import torch
+        return ["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"]
+    except (ImportError, OSError):
+        return ["cpu"]
+
+
 def unavailable():
     if active_runs():
         st.warning(tr("button_running"))
@@ -353,6 +363,9 @@ def train_page():
                                     value=8)
             seed = st.number_input(tr("seed"), min_value=0, max_value=2147483647,
                                    value=17)
+        lr = st.number_input(tr("lr"), min_value=0.000001, max_value=1.0,
+                             value=0.001, format="%.6f")
+        device = st.selectbox(tr("device"), device_options(), key="train_device")
         phys = st.number_input(tr("physics"), min_value=0., max_value=100.,
                                value=0., format="%.4f",
                                help=tr("physics_warn"),
@@ -363,10 +376,11 @@ def train_page():
         job("train", lambda p: [(f"Train {arch}",
             train_task(ds, p / arch, arch, epochs=int(epochs),
                        patience=int(patience), batch_size=int(batch),
-                       seed=int(seed), physics_weight=phys if arch == "unet" else 0))],
+                       seed=int(seed), lr=lr, device=device,
+                       physics_weight=phys if arch == "unet" else 0))],
             {"dataset": str(ds), "architecture": arch, "epochs": int(epochs),
              "patience": int(patience), "batch_size": int(batch), "seed": int(seed),
-             "physics_weight": phys})
+             "physics_weight": phys, "learning_rate": lr, "device": device})
 
 
 def study_page():
@@ -383,6 +397,9 @@ def study_page():
         epochs = a.number_input(tr("epochs"), value=400, min_value=1, max_value=20000)
         patience = b.number_input(tr("patience"), value=90, min_value=1, max_value=20000)
         batch = c.number_input(tr("batch"), value=8, min_value=1, max_value=1024)
+        lr = st.number_input(tr("lr"), min_value=0.000001, max_value=1.0,
+                             value=0.001, format="%.6f", key="study_lr")
+        device = st.selectbox(tr("device"), device_options(), key="study_device")
         phys = st.number_input(tr("physics"), min_value=0., max_value=100.,
                                value=0., help=tr("physics_warn"))
         st.caption(tr("study_limit"))
@@ -395,9 +412,10 @@ def study_page():
             job("study",
                 lambda p: make_study(ds, p, selected, seeds=seeds, epochs=int(epochs),
                                      patience=int(patience), batch_size=int(batch),
-                                     physics_weight=phys),
+                                     physics_weight=phys, lr=lr, device=device),
                 {"dataset": str(ds), "models": selected, "seeds": seeds,
-                 "epochs": int(epochs), "physics_weight": phys})
+                 "epochs": int(epochs), "physics_weight": phys,
+                 "learning_rate": lr, "device": device})
         except ValueError as exc:
             alert(exc)
     st.divider()
@@ -428,12 +446,13 @@ def generative_page():
         a, b = st.columns(2)
         epochs = a.number_input(tr("epochs"), value=300, min_value=1, max_value=20000)
         steps = b.number_input(tr("steps"), value=50, min_value=2, max_value=1000)
+        device = st.selectbox(tr("device"), device_options(), key="diff_train_device")
         submitted = st.form_submit_button(tr("start_diff"), type="primary")
     if submitted:
         job("diffusion_train", lambda p: [(f"Train diffusion {architecture}",
-            diffusion_task(ds, p / architecture, architecture, int(epochs), int(steps)))],
+            diffusion_task(ds, p / architecture, architecture, int(epochs), int(steps), device))],
             {"dataset": str(ds), "architecture": architecture,
-             "epochs": int(epochs), "steps": int(steps)})
+             "epochs": int(epochs), "steps": int(steps), "device": device})
     st.divider()
     st.markdown("#### " + tr("eval_diff"))
     available = [p for p, name in checkpoints() if name in GENERATIVE]
@@ -445,11 +464,13 @@ def generative_page():
                           format_func=lambda p: str(p.relative_to(EXPERIMENTS)))
         samples = st.number_input(tr("samples_per_case"), min_value=1,
                                   max_value=128, value=4)
+        eval_device = st.selectbox(tr("device"), device_options(), key="diff_eval_device")
         clicked = st.form_submit_button(tr("evaluate"))
     if clicked:
         job("diffusion_eval", lambda p: [("FEM evaluation of generative candidates",
-            diffusion_eval_task(ds, cp, p / "diffusion.csv", int(samples)))],
-            {"dataset": str(ds), "checkpoint": str(cp), "samples": int(samples)})
+            diffusion_eval_task(ds, cp, p / "diffusion.csv", int(samples), eval_device))],
+            {"dataset": str(ds), "checkpoint": str(cp),
+             "samples": int(samples), "device": eval_device})
 
 
 def fem_page():
@@ -460,20 +481,22 @@ def fem_page():
     with st.form("train_fem"):
         epochs = st.number_input(tr("epochs"), min_value=1,
                                  max_value=20000, value=300)
+        device = st.selectbox(tr("device"), device_options(), key="fem_train_device")
         train_clicked = st.form_submit_button(tr("train_fem"), type="primary")
     if train_clicked:
         job("fem_train", lambda p: [("Train FEM displacement predictor",
-            fem_task(ds, p / "fem", int(epochs)))],
-            {"dataset": str(ds), "epochs": int(epochs)})
+            fem_task(ds, p / "fem", int(epochs), device))],
+            {"dataset": str(ds), "epochs": int(epochs), "device": device})
     st.divider()
     cp = checkpoint_choices("fem", "fem_checkpoint")
     if cp is None:
         st.info(tr("no_weights"))
         return
+    eval_device = st.selectbox(tr("device"), device_options(), key="fem_eval_device")
     if st.button(tr("test_fem"), type="secondary"):
         job("fem_eval", lambda p: [("Evaluate CG and neural warm start",
-            fem_eval_task(ds, cp, p / "fem_eval.json"))],
-            {"dataset": str(ds), "checkpoint": str(cp)})
+            fem_eval_task(ds, cp, p / "fem_eval.json", eval_device))],
+            {"dataset": str(ds), "checkpoint": str(cp), "device": eval_device})
 
 
 def summarize_metrics(data):
