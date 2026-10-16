@@ -34,7 +34,7 @@ st.set_page_config(
 
 EN = {
     "app": "Topology Lab", "subtitle": "Topology optimization · FEM · Scientific ML",
-    "language": "Language", "nav": "Workspace", "overview": "Overview",
+    "language": "Language", "nav": "Workspace", "dimension": "Dimension", "overview": "Overview",
     "dataset": "Datasets", "train": "Training", "study": "Comparative study",
     "generative": "Generative design", "fem": "Neural FEM",
     "analysis": "Results & analysis", "runs": "Runs & logs",
@@ -117,7 +117,7 @@ EN = {
 }
 RU = {
     "app": "Topology Lab", "subtitle": "Топологическая оптимизация · FEM · Научное ML",
-    "language": "Язык", "nav": "Рабочая область", "overview": "Обзор",
+    "language": "Язык", "nav": "Рабочая область", "dimension": "Размерность", "overview": "Обзор",
     "dataset": "Датасеты", "train": "Обучение", "study": "Сравнение моделей",
     "generative": "Генеративный дизайн", "fem": "Нейросетевой FEM",
     "analysis": "Результаты и анализ", "runs": "Запуски и журналы",
@@ -693,8 +693,14 @@ with st.sidebar:
         st.session_state.lang = selected_lang
         st.rerun()
     st.divider()
-    pages = ("overview", "dataset", "train", "study", "generative", "fem", "analysis", "runs")
-    current_page = st.radio(tr("nav"), pages, format_func=tr, label_visibility="collapsed")
+    dimension = st.radio(tr("dimension"), ("2D", "3D"), horizontal=True,
+                         key="dimension_selector")
+    if dimension == "3D":
+        pages = ("overview", "dataset", "train", "study", "analysis", "runs")
+    else:
+        pages = ("overview", "dataset", "train", "study", "generative", "fem", "analysis", "runs")
+    current_page = st.radio(tr("nav"), pages, format_func=tr,
+                            label_visibility="collapsed", key="navigation")
     st.divider()
     active = active_runs()
     if active:
@@ -704,10 +710,14 @@ with st.sidebar:
         st.caption("● " + tr("idle"))
     st.caption(tr("execution_note"))
 
-st.title(tr("app"))
+st.title(tr("app") + " · " + dimension)
 st.caption(tr("subtitle"))
-{
-    "overview": overview, "dataset": dataset_page, "train": train_page,
-    "study": study_page, "generative": generative_page, "fem": fem_page,
-    "analysis": results_page, "runs": runs_page,
-}[current_page]()
+if dimension == "3D" and current_page != "runs":
+    from topopt.mlnext.gui3d import render
+    render(current_page, language=st.session_state.lang)
+else:
+    {
+        "overview": overview, "dataset": dataset_page, "train": train_page,
+        "study": study_page, "generative": generative_page, "fem": fem_page,
+        "analysis": results_page, "runs": runs_page,
+    }[current_page]()
