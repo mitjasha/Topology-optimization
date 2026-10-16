@@ -78,7 +78,10 @@ def run(dataset, checkpoints, output, *, max_iter=400, tolerance=.02, seed=17):
                 direct_ratio = direct["compliance"] / reference
                 attempt = optimize(model, initial=guess, max_iter=max_iter,
                                    min_iter=15, tolerance=tolerance)
-                nsolve = early["fe_solves"] + 1 + 1 + attempt["fe_solves"]
+                # Both the ceiling and candidate checks are FEM analyses. The learned
+                # update model additionally requires a sensitivity FEM analysis.
+                nsolve = (early["fe_solves"] + 2 + attempt["fe_solves"] +
+                          int(method == "learned_update"))
                 accepted = (attempt["converged"] and np.isfinite(attempt["compliance"])
                             and attempt["compliance"] <= ceiling * (1+1e-8)
                             and abs(attempt["volume"]-case.case.volume) < 1e-6
