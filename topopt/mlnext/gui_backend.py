@@ -244,8 +244,15 @@ def new_run(kind, steps_builder, config):
             **({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
                if os.name == "nt" else {"start_new_session": True}),
         )
-        record["pid"] = proc.pid
-        atomic_json(folder / "run.json", record)
+        # The worker may already have advanced from queued -> running.
+        # Never overwrite its status, logs or stage results with stale state.
+        try:
+            latest = get_run(ident)
+            if latest["status"] == "queued":
+                latest["pid"] = proc.pid
+                atomic_json(folder / "run.json", latest)
+        except (OSError, ValueError):
+            pass
         return ident
     except Exception:
         import shutil
@@ -276,8 +283,34 @@ def get_run(run_id):
     return json.loads(file.read_text(encoding="utf-8"))
 
 
+def _pid_running(pid):
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def active_runs():
-    return [r for r in list_runs() if r["status"] in ("queued", "running", "cancel_requested")]
+    """Exclude workers known to have exited; classify them as interrupted."""
+    active = []
+    for record in list_runs():
+        if record["status"] not in ("queued", "running", "cancel_requested"):
+            continue
+        pid = record.get("pid")
+        age_seconds = (datetime.now(timezone.utc) -
+            datetime.fromisoformat(record["created"])).total_seconds()
+        if pid and not _pid_running(pid) or (not pid and age_seconds > 20):
+            record.update(status="interrupted", finished=utcnow(),
+                          error="Worker process is no longer running")
+            atomic_json(RUNS / record["id"] / "run.json", record)
+        else:
+            active.append(record)
+    return active
 
 
 def request_cancel(run_id):
