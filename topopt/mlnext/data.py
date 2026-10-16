@@ -16,6 +16,7 @@ class Problem:
     load_edge: str = "right"
     load_axis: str = "y"
     load_position: float = 0.5
+    geometry: str = "solid"
 
 
 class GeneralModel(Model):
@@ -23,6 +24,21 @@ class GeneralModel(Model):
     def __init__(self, problem):
         self.problem = problem
         super().__init__(problem.case, backend="sparse")
+        yy, xx = np.mgrid[:problem.case.ny, :problem.case.nx]
+        xn = (xx + .5) / problem.case.nx
+        yn = (yy + .5) / problem.case.ny
+        if problem.geometry == "solid":
+            mask = np.ones_like(xn)
+        elif problem.geometry == "bottom-notch":
+            mask = np.where((xn > .35) & (xn < .65) & (yn < .26), 0., 1.)
+        elif problem.geometry == "central-hole":
+            mask = np.where((xn > .32) & (xn < .68) & (yn > .29) & (yn < .71), 0., 1.)
+        else:
+            raise ValueError("Unknown geometry")
+        self.domain = mask.ravel()
+        if problem.case.volume >= self.domain.mean():
+            raise ValueError("Requested material volume exceeds available design domain")
+        self.dv = self.filter.T @ self.domain / self.ne
         c = problem.case
         nx, ny = c.nx, c.ny
 
@@ -60,9 +76,20 @@ class GeneralModel(Model):
         if not np.any(self.f[self.free]):
             raise ValueError("Applied load lies entirely on fixed degrees of freedom")
 
+    def physical(self, design):
+        return np.asarray(super().physical(design)) * self.domain
+
+    def analyze(self, design):
+        x = np.asarray(design, dtype=float).reshape(self.ne)
+        if not np.all(np.isfinite(x)) or np.any(x < 0) or np.any(x > 1):
+            raise ValueError("Design variables must be finite and in [0,1]")
+        result = self.analyze_density(self.physical(x))
+        result["gradient"] = self.filter.T @ (result["density_gradient"] * self.domain)
+        return result
+
 
 FEATURE_NAMES = ("early_density", "x", "y", "fixed_fraction", "force_x",
-                 "force_y", "volume", "aspect", "load_span", "filter_radius")
+                 "force_y", "volume", "aspect", "load_span", "filter_radius", "domain_mask")
 
 
 def cell_features(problem, model, early):
@@ -82,7 +109,8 @@ def cell_features(problem, model, early):
     return np.stack((np.asarray(early).reshape(ny, nx),
                      (x + .5) / nx, (y + .5) / ny, fixed, fx, fy,
                      constant(c.volume), constant(c.length / c.height / 4),
-                     constant(c.load_span), constant(c.radius / c.height))).astype("float32")
+                     constant(c.load_span), constant(c.radius / c.height),
+                     model.domain.reshape(ny, nx))).astype("float32")
 
 
 def nodal_features(model, density):
@@ -122,7 +150,9 @@ def sample_problems(count=90, nx=16, ny=8, seed=17):
                      volume=float(rng.uniform(.35, .65)),
                      load_y=.5, load_span=0.0,
                      radius=max(.19, 1.1 * length / nx))
-            yield split, Problem(c, support, edge, axis, float(rng.uniform(.2, .8)))
+            geometry = ("central-hole" if split == "test" else
+                        "bottom-notch" if support == "left" and i % 3 == 0 else "solid")
+            yield split, Problem(c, support, edge, axis, float(rng.uniform(.2, .8)), geometry)
 
 
 def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
@@ -140,7 +170,9 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
         if not ref["converged"]:
             failures.append({"problem": {"case": asdict(problem.case),
                               "support": problem.support, "load_edge": problem.load_edge,
-                              "load_axis": problem.load_axis, "load_position": problem.load_position},
+                              "load_axis": problem.load_axis, "load_position": problem.load_position,
+                        "geometry": problem.geometry,
+                              "geometry": problem.geometry},
                              "reason": "reference_not_converged"})
             continue
         early = ref["snapshots"][4] if len(ref["snapshots"]) >= 5 else optimize(
@@ -167,7 +199,7 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
     manifest = {"requested": count, "usable": len(records), "failures": failures,
                 "seed": seed, "max_iter": max_iter, "tolerance": tolerance,
                 "feature_names": FEATURE_NAMES,
-                "ood_test": "held-out support/load families and aspect ratios",
+                "ood_test": "held-out supports, load families, aspect ratios and central-hole geometry",
                 "warning": "FEM numerical references are not experimental validation",
                 "counts": {s: sum(r["split"] == s for r in records)
                            for s in ("train", "validation", "test")}}
@@ -178,7 +210,7 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
 def problem_from_record(record):
     r = json.loads(str(record))
     return Problem(Case(**r["case"]), r["support"], r["load_edge"],
-                   r["load_axis"], r["load_position"])
+                   r["load_axis"], r["load_position"], r.get("geometry", "solid"))
 
 
 def load_dataset(path):
