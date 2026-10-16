@@ -13,16 +13,16 @@ simplify the solvers. It starts real Python processes and retains outputs.
 
 From the repository root on Python 3.12:
 
-\`\`\`bash
+```bash
 python -m venv .venv
 # Linux/macOS: source .venv/bin/activate
 # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements-gui.txt
 python -m streamlit run topopt/mlnext/gui.py
-\`\`\`
+```
 
 The local web UI opens in your browser; if it doesn't, open
-\`http://localhost:8501\`.
+`http://localhost:8501`.
 
 Use the sidebar **Language / Язык** selector to switch between English and
 Russian. Streamlit itself is served locally. No GPU is required for small
@@ -36,7 +36,7 @@ compute and disk space.
    numerically solved. Nonconvergence is recorded in the manifest.
 2. **Training** — choose U-Net, MeshGNN, FNO or learned update; configure
    epochs, early stopping, batch size, seed and (U-Net only) differentiable
-   compliance loss. Neural models write \`best.pt\` and \`training.json\`.
+   compliance loss. Neural models write `best.pt` and `training.json`.
 3. **Comparative study** — choose architectures and independent seeds.
    Each seed runs a complete train-then-compare sequence against OC and Ridge
    on the same held-out test cases. Or evaluate existing checkpoints.
@@ -57,15 +57,15 @@ compute and disk space.
 
 ## Files and safety
 
-The app writes to \`artifacts/mlnext/gui/<run-id>/\`. Each run has
-\`run.json\` (machine-readable status/config), \`process.log\`, trained
+The app writes to `artifacts/mlnext/gui/<run-id>/`. Each run has
+`run.json` (machine-readable status/config), `process.log`, trained
 weights and/or reports. Dataset files may also live under this tree.
-Historical \`evidence_v2/\` datasets are read-only in the GUI.
+Historical `evidence_v2/` datasets are read-only in the GUI.
 
 No arbitrary shell execution, arbitrary path selection, or remote service
 connections are exposed by the GUI. The job backend permits only known
-\`python -m topopt.mlnext.*\` commands and confines output to
-\`artifacts/mlnext\`. Do not expose this developer workbench directly
+`python -m topopt.mlnext.*` commands and confines output to
+`artifacts/mlnext`. Do not expose this developer workbench directly
 to an untrusted public network: Streamlit has no project-specific
 authentication in this application.
 
@@ -76,12 +76,12 @@ as interrupted when detected.
 
 ### Run states
 
-* \`queued\` — worker launched.
-* \`running\` — at least one command is executing.
-* \`completed\` — all commands exited with code 0.
-* \`failed\` — a command returned a nonzero exit code.
-* \`cancel_requested\` / \`cancelled\` — cancellation flag and termination.
-* \`interrupted\` — the manager found an active record whose worker exited.
+* `queued` — worker launched.
+* `running` — at least one command is executing.
+* `completed` — all commands exited with code 0.
+* `failed` — a command returned a nonzero exit code.
+* `cancel_requested` / `cancelled` — cancellation flag and termination.
+* `interrupted` — the manager found an active record whose worker exited.
 
 ## Scientific evidence and limitations
 
@@ -102,8 +102,8 @@ the numerical tools and validation protocol, not merely adding UI controls.
 
 * **No datasets:** create one in Datasets. If reference FEM fails to converge,
   inspect the manifest and the process log.
-* **No checkpoints:** train a model first. Only \`best.pt\` checkpoints
-  with accompanying \`training.json\` are listed.
+* **No checkpoints:** train a model first. Only `best.pt` checkpoints
+  with accompanying `training.json` are listed.
 * **Busy:** one experiment is active; inspect Runs & logs or cancel it.
 * **Interrupted:** a worker exited unexpectedly. The run directory and
   logs remain available for inspection.
