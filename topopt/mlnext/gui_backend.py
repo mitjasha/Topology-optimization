@@ -117,21 +117,25 @@ def dataset_task(folder, *, count=24, nx=8, ny=4, seed=17, max_iter=400):
 
 
 def train_task(dataset, folder, architecture, *, epochs=400, patience=90,
-               batch_size=8, seed=17, physics_weight=0.0, physics_every=10):
+               batch_size=8, seed=17, physics_weight=0.0, physics_every=10,
+               lr=0.001, device="cpu"):
     if architecture not in TRAINABLE:
         raise ValueError("Unknown supervised architecture")
     if not 1 <= epochs <= 20000 or not 1 <= patience <= 20000:
         raise ValueError("Epoch or patience out of bounds")
     if not 1 <= batch_size <= 1024 or physics_weight < 0 or physics_weight > 100:
         raise ValueError("Invalid batch size or physics weight")
-    if physics_every < 1:
-        raise ValueError("physics_every must be positive")
+    if physics_every < 1 or not 0 < lr <= 1:
+        raise ValueError("Invalid physics interval or learning rate")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("device must be cpu or cuda")
     return [PYTHON, "-m", "topopt.mlnext.train", "train",
             "--dataset", _strpath(dataset), "--model", architecture,
             "--output", _strpath(folder), "--epochs", str(int(epochs)),
             "--patience", str(int(patience)), "--batch-size", str(int(batch_size)),
             "--seed", str(int(seed)), "--physics-weight", str(float(physics_weight)),
-            "--physics-every", str(int(physics_every))]
+            "--physics-every", str(int(physics_every)), "--lr", str(float(lr)),
+            "--device", device]
 
 
 def comparison_task(dataset, output, model_paths=None):
@@ -144,38 +148,49 @@ def comparison_task(dataset, output, model_paths=None):
     return cmd
 
 
-def diffusion_task(dataset, folder, architecture="dit", epochs=100, steps=30):
+def diffusion_task(dataset, folder, architecture="dit", epochs=100, steps=30, device="cpu"):
     if architecture not in GENERATIVE or not 1 <= epochs <= 20000 or not 2 <= steps <= 1000:
         raise ValueError("Invalid diffusion configuration")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("Unknown device")
     return [PYTHON, "-m", "topopt.mlnext.diffusion", "train",
             "--dataset", _strpath(dataset), "--output", _strpath(folder),
-            "--model", architecture, "--epochs", str(int(epochs)), "--steps", str(int(steps))]
+            "--model", architecture, "--epochs", str(int(epochs)), "--steps", str(int(steps)),
+            "--device", device]
 
 
-def diffusion_eval_task(dataset, checkpoint, output, samples=4):
+def diffusion_eval_task(dataset, checkpoint, output, samples=4, device="cpu"):
     if not 1 <= samples <= 128:
         raise ValueError("samples must be 1..128")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("Unknown device")
     return [PYTHON, "-m", "topopt.mlnext.diffusion", "evaluate",
             "--dataset", _strpath(dataset), "--checkpoint", _strpath(checkpoint),
-            "--output", _strpath(output), "--samples", str(int(samples))]
+            "--output", _strpath(output), "--samples", str(int(samples)),
+            "--device", device]
 
 
-def fem_task(dataset, folder, epochs=300):
+def fem_task(dataset, folder, epochs=300, device="cpu"):
     if not 1 <= epochs <= 20000:
         raise ValueError("epochs out of bounds")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("Unknown device")
     return [PYTHON, "-m", "topopt.mlnext.fem_accel", "train",
             "--dataset", _strpath(dataset), "--output", _strpath(folder),
-            "--epochs", str(int(epochs))]
+            "--epochs", str(int(epochs)), "--device", device]
 
 
-def fem_eval_task(dataset, checkpoint, output):
+def fem_eval_task(dataset, checkpoint, output, device="cpu"):
+    if device not in ("cpu", "cuda"):
+        raise ValueError("Unknown device")
     return [PYTHON, "-m", "topopt.mlnext.fem_accel", "evaluate",
             "--dataset", _strpath(dataset), "--checkpoint", _strpath(checkpoint),
-            "--output", _strpath(output)]
+            "--output", _strpath(output), "--device", device]
 
 
 def make_study(dataset, folder, architectures, *, seeds=(17,), epochs=400,
-               patience=90, batch_size=8, physics_weight=0.0):
+               patience=90, batch_size=8, physics_weight=0.0,
+               lr=.001, device="cpu"):
     """For each seed: train all selected models, then compare with OC + Ridge.
 
     Every architecture within a seed uses the same dataset and evaluation gate.
@@ -193,7 +208,7 @@ def make_study(dataset, folder, architectures, *, seeds=(17,), epochs=400,
             steps.append((f"{arch} / seed {seed}",
                           train_task(dataset, target, arch, epochs=epochs,
                                      patience=patience, batch_size=batch_size,
-                                     seed=int(seed),
+                                     seed=int(seed), lr=lr, device=device,
                                      physics_weight=physics_weight if arch == "unet" else 0.0)))
         steps.append((f"Comparison / seed {seed}",
                       comparison_task(dataset, Path(folder) / f"seed_{int(seed)}" /
