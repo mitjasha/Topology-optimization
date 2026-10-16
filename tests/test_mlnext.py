@@ -2,6 +2,10 @@
 import numpy as np
 import pytest
 
+# The historical numerical-verification environment intentionally has no PyTorch.
+# Skip this optional package there; dedicated scientific-ML CI installs PyTorch.
+pytest.importorskip("torch")
+
 from topopt.solver import Case
 from topopt.mlnext.data import (Problem, GeneralModel, cell_features,
                                nodal_features, sample_problems)
