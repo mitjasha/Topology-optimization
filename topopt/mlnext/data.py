@@ -173,7 +173,6 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
             failures.append({"problem": {"case": asdict(problem.case),
                               "support": problem.support, "load_edge": problem.load_edge,
                               "load_axis": problem.load_axis, "load_position": problem.load_position,
-                        "geometry": problem.geometry,
                               "geometry": problem.geometry},
                              "reason": "reference_not_converged"})
             continue
@@ -190,7 +189,7 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
         records.append({"split": split, "case": asdict(problem.case),
                         "support": problem.support, "load_edge": problem.load_edge,
                         "load_axis": problem.load_axis, "load_position": problem.load_position,
-                        "fe_solves": ref["fe_solves"]})
+                        "geometry": problem.geometry, "fe_solves": ref["fe_solves"]})
     if not records or not all(any(r["split"] == split for r in records)
                               for split in ("train", "validation", "test")):
         raise RuntimeError("Insufficient converged cases per split; increase max_iter")
