@@ -326,6 +326,11 @@ def dataset_page():
 
 
 def view_density(path):
+    # NPZ does not support lazy slicing of compressed arrays. Keep browser
+    # previews bounded even when the research dataset itself is much larger.
+    if Path(path).stat().st_size > 256 * 1024 * 1024:
+        st.info("Field preview unavailable for files above 256 MiB.")
+        return
     try:
         # Safe NPZ read (allow_pickle=False); do not deserialize checkpoints.
         with np.load(path, allow_pickle=False) as ar:
