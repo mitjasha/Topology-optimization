@@ -210,7 +210,7 @@ def evaluate(dataset, checkpoint, output, max_iter=400, tolerance=.02, device="c
                  and attempt["compliance"] <= ceiling * (1 + 1e-8)
                  and abs(attempt["volume"] - problem.case.volume) < 1e-6
                  and attempt["equilibrium_error"] < 1e-7)
-        solves = early["fe_solves"] + 1 + attempt["fe_solves"] + 1
+        solves = early["fe_solves"] + 2 + attempt["fe_solves"] + int(architecture == "learned_update")
         result = attempt
         if not valid:
             result = optimize(model, max_iter=max_iter, tolerance=tolerance, min_iter=15)
