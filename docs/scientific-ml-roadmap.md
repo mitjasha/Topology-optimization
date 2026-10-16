@@ -22,7 +22,7 @@ Python 3.12 is recommended. CPU and PyTorch are sufficient for correctness tests
 
 ```bash
 python -m pip install -r requirements-mlnext.txt
-python -m pytest tests/test_mlnext.py -v
+python -m pytest mltests/test_mlnext.py -v
 python scripts/mlnext_experiment.py --quick --dry-run
 python scripts/mlnext_experiment.py --quick
 ```
