@@ -18,6 +18,26 @@ A reproducible CAE case study combining finite-element analysis, topology optimi
 
 [**Run on Windows**](RUN_WINDOWS_EN.md) · [**Инструкция на русском**](RUN_WINDOWS_RU.md) · [**Experiment protocol**](docs/development-v2.md) · [**Technical review**](docs/release-review-v2.md)
 
+## Topology Lab — graphical research workbench
+
+**[English guide](docs/GUI_EN.md) · [Русская инструкция](docs/GUI_RU.md)**
+
+An optional local Streamlit application provides English/Russian navigation, dataset
+generation, supervised and diffusion-model training, multi-seed comparative studies,
+neural FEM evaluation, live job logs, and interactive analysis of actual results.
+CLI tools and frozen numerical baselines remain independently usable.
+
+```bash
+python -m pip install -r requirements-gui.txt
+python -m streamlit run topopt/mlnext/gui.py
+```
+
+Alternatively start `run_topology_lab.cmd` (Windows) or
+`bash run_topology_lab.sh` (Linux/macOS) after installing GUI dependencies.
+The app runs locally at `http://localhost:8501` and is not intended for
+public network exposure. Heavy model training has not been performed by adding this UI.
+
+
 ## Scientific ML research track (experimental)
 
 A separately reproducible [Scientific ML Suite](docs/scientific-ml-roadmap.md)
