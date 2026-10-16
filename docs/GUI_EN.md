@@ -25,9 +25,10 @@ The local web UI opens in your browser; if it doesn't, open
 `http://localhost:8501`.
 
 Use the sidebar **Language / Язык** selector to switch between English and
-Russian. Streamlit itself is served locally. No GPU is required for small
-experiments, but 900-case and 64×32 research runs can take substantial
-compute and disk space.
+Russian. Streamlit itself is served locally. No GPU is required for small experiments. Training and diffusion can optionally
+use CUDA if PyTorch detects a supported GPU; the paired OC/Ridge/ML FEM benchmark
+runs on CPU to keep timing comparisons controlled. Research-scale datasets can
+require substantial computation and storage.
 
 ## Guided workflow
 
@@ -94,7 +95,7 @@ A visual improvement is not proof of higher stiffness or accuracy.
 
 The current GUI supports CPU execution and the parameters exposed by the
 underlying CLIs. Training-resume from an arbitrary optimizer checkpoint,
-distributed/GPU scheduling, arbitrary CAD imports and cloud orchestration
+distributed/multi-GPU scheduling, arbitrary CAD imports and cloud orchestration
 are not implemented. Extending these capabilities requires extending
 the numerical tools and validation protocol, not merely adding UI controls.
 
