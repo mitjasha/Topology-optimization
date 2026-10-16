@@ -141,7 +141,8 @@ def sample(model, condition, steps, n=4, seed=42, device="cpu"):
         eps = model(z, cond, time)
         mean = (z - beta[t] * eps / (1 - abar[t]).sqrt()) / alpha[t].sqrt()
         if t > 0:
-            z = mean + beta[t].sqrt() * torch.randn(z.shape, generator=gen, device=device)
+            posterior_var = beta[t] * (1 - abar[t-1]) / (1 - abar[t])
+            z = mean + posterior_var.sqrt() * torch.randn(z.shape, generator=gen, device=device)
         else:
             z = mean
     return ((z.clamp(-1, 1) + 1) / 2)[:, 0].cpu().numpy()
