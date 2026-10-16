@@ -217,15 +217,18 @@ if __name__ == "__main__":
     t.add_argument("--model", choices=["conv", "dit"], default="dit")
     t.add_argument("--epochs", type=int, default=400)
     t.add_argument("--steps", type=int, default=50)
+    t.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     v = sub.add_parser("evaluate")
     v.add_argument("--dataset", default="artifacts/mlnext/dataset.npz")
     v.add_argument("--checkpoint", required=True)
     v.add_argument("--output", default="artifacts/mlnext/diffusion.csv")
     v.add_argument("--samples", type=int, default=4)
+    v.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     a = p.parse_args()
     if a.action == "train":
         print(json.dumps(train(a.dataset, a.output, architecture=a.model,
-                               epochs=a.epochs, steps=a.steps), indent=2))
+                               epochs=a.epochs, steps=a.steps,
+                               device=a.device), indent=2))
     else:
         print(json.dumps(evaluate(a.dataset, a.checkpoint, a.output,
-                                  samples=a.samples), indent=2))
+                                  samples=a.samples, device=a.device), indent=2))
