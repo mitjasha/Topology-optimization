@@ -18,6 +18,22 @@ A reproducible CAE case study combining finite-element analysis, topology optimi
 
 [**Run on Windows**](RUN_WINDOWS_EN.md) · [**Инструкция на русском**](RUN_WINDOWS_RU.md) · [**Experiment protocol**](docs/development-v2.md) · [**Technical review**](docs/release-review-v2.md)
 
+## Scientific ML research track (experimental)
+
+A separately reproducible [Scientific ML Suite](docs/scientific-ml-roadmap.md)
+extends the existing numerical optimizer without replacing its verified Ridge/U-Net evidence.
+The suite includes BC/geometry-conditioned residual U-Net, graph message passing,
+Fourier neural operators, a differentiable compliance-based loss, learned density
+updates, a neural initial guess for Jacobi-preconditioned FEM-CG, and conditional
+diffusion/transformer design sampling.
+
+Start with `python -m pip install -r requirements-mlnext.txt`,
+`python -m pytest tests/test_mlnext.py -v`, and
+`python scripts/mlnext_experiment.py --quick --dry-run`.
+No improvement beyond the previously published Ridge/U-Net benchmark is claimed
+until held-out, physics-gated comparisons finish. The research workflow and its
+limitations are documented separately from the historical evidence.
+
 ## Results at a glance
 
 The extended learning experiment uses **84 cases: 48 training, 12 validation and 24 held-out test cases**. The test family has a new rectangular aspect ratio, L/H = 2.5; all cases retain cantilever supports. Three network initialization seeds and three timing repeats give 216 evaluations per method, not 216 independent test problems.
