@@ -28,7 +28,7 @@ updates, a neural initial guess for Jacobi-preconditioned FEM-CG, and conditiona
 diffusion/transformer design sampling.
 
 Start with `python -m pip install -r requirements-mlnext.txt`,
-`python -m pytest tests/test_mlnext.py -v`, and
+`python -m pytest mltests/test_mlnext.py -v`, and
 `python scripts/mlnext_experiment.py --quick --dry-run`.
 No improvement beyond the previously published Ridge/U-Net benchmark is claimed
 until held-out, physics-gated comparisons finish. The research workflow and its
