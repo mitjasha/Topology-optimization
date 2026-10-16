@@ -26,6 +26,8 @@ SAFE_MODULES = frozenset({
     "topopt.mlnext.comparison",
     "topopt.mlnext.diffusion",
     "topopt.mlnext.fem_accel",
+    "topopt.mlnext.data3d",
+    "topopt.mlnext.train3d",
 })
 TRAINABLE = ("unet", "gnn", "fno", "learned_update")
 GENERATIVE = ("conv", "dit")
@@ -360,3 +362,79 @@ def read_json(path):
     if not _inside(path, EXPERIMENTS):
         raise ValueError("Outside experiment folder")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Volumetric Hex8 experiment commands. Kept separate from 2D metadata/schema.
+# ---------------------------------------------------------------------------
+THREED_ARCHITECTURES = ("unet3d", "gnn3d", "fno3d")
+
+
+def datasets3d():
+    if not EXPERIMENTS.is_dir():
+        return []
+    return sorted(
+        [p for p in EXPERIMENTS.rglob("dataset3d.npz")
+         if p.is_file() and _inside(p, EXPERIMENTS)],
+        key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def dataset_task3d(folder, *, count=24, nx=8, ny=4, nz=4, seed=17, max_iter=400):
+    if not 12 <= count <= 100000:
+        raise ValueError("3D dataset case count must be between 12 and 100000")
+    if min(nx, ny, nz) < 4 or nx*ny*nz > 8192:
+        raise ValueError("3D mesh dimensions >=4 and at most 8192 Hex8 elements")
+    if not 15 <= max_iter <= 10000:
+        raise ValueError("Invalid FEM optimization iteration limit")
+    return [PYTHON, "-m", "topopt.mlnext.data3d",
+            "--output", _strpath(Path(folder)/"dataset3d.npz"),
+            "--count", str(int(count)), "--nx", str(int(nx)),
+            "--ny", str(int(ny)), "--nz", str(int(nz)),
+            "--seed", str(int(seed)), "--max-iter", str(int(max_iter))]
+
+
+def train_task3d(dataset, folder, architecture, *, epochs=400, patience=90,
+                 batch_size=4, seed=17, lr=.001, device="cpu"):
+    if architecture not in THREED_ARCHITECTURES:
+        raise ValueError("Unknown 3D architecture")
+    if not 1 <= epochs <= 20000 or not 1 <= patience <= 20000 or not 1 <= batch_size <= 1024:
+        raise ValueError("Invalid 3D training parameters")
+    if not 0 < lr <= 1 or device not in ("cpu", "cuda"):
+        raise ValueError("Invalid learning rate or device")
+    return [PYTHON, "-m", "topopt.mlnext.train3d", "train",
+            "--dataset", _strpath(dataset), "--model", architecture,
+            "--output", _strpath(folder), "--epochs", str(int(epochs)),
+            "--patience", str(int(patience)), "--batch-size", str(int(batch_size)),
+            "--seed", str(int(seed)), "--lr", str(float(lr)), "--device", device]
+
+
+def comparison_task3d(dataset, output, model_paths=None):
+    cmd=[PYTHON, "-m", "topopt.mlnext.train3d", "evaluate",
+         "--dataset", _strpath(dataset), "--output", _strpath(output)]
+    for name,path in sorted((model_paths or {}).items()):
+        if name not in THREED_ARCHITECTURES:
+            raise ValueError("Unknown 3D checkpoint architecture")
+        cmd.extend(["--checkpoint", name+"="+_strpath(path)])
+    return cmd
+
+
+def make_study3d(dataset, folder, architectures, *, seeds=(17,),
+                 epochs=400, patience=90, batch_size=4, lr=.001, device="cpu"):
+    if not architectures or len(architectures)!=len(set(architectures)):
+        raise ValueError("Choose distinct 3D architectures")
+    if not 1 <= len(seeds) <= 10 or len(set(seeds))!=len(seeds):
+        raise ValueError("Use 1–10 distinct random seeds")
+    steps=[]
+    for seed in seeds:
+        cp={}
+        for architecture in architectures:
+            target=Path(folder)/f"seed_{int(seed)}"/architecture
+            cp[architecture]=target/"best.pt"
+            steps.append((f"{architecture} / seed {seed}",
+                         train_task3d(dataset,target,architecture,epochs=epochs,
+                                      patience=patience,batch_size=batch_size,
+                                      seed=int(seed),lr=lr,device=device)))
+        steps.append((f"3D comparison / seed {seed}",
+                      comparison_task3d(dataset,Path(folder)/f"seed_{int(seed)}"/
+                                        "comparison3d.csv",cp)))
+    return steps
