@@ -4,12 +4,16 @@ on:
     paths:
       - 'topopt/mlnext/**'
       - 'mltests/test_mlnext.py'
+      - 'mltests/test_gui.py'
+      - 'requirements-gui.txt'
       - 'requirements-mlnext.txt'
       - '.github/workflows/mlnext.yml'
   pull_request:
     paths:
       - 'topopt/mlnext/**'
       - 'mltests/test_mlnext.py'
+      - 'mltests/test_gui.py'
+      - 'requirements-gui.txt'
       - 'requirements-mlnext.txt'
       - '.github/workflows/mlnext.yml'
   workflow_dispatch:
@@ -23,4 +27,4 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -r requirements-mlnext.txt
-      - run: python -m pytest mltests/test_mlnext.py -v
+      - run: python -m pytest mltests/test_mlnext.py mltests/test_gui.py -v
