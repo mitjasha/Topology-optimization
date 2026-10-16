@@ -38,7 +38,7 @@ class GeneralModel(Model):
         self.domain = mask.ravel()
         if problem.case.volume >= self.domain.mean():
             raise ValueError("Requested material volume exceeds available design domain")
-        self.dv = self.filter.T @ self.domain / self.ne
+        self.dv = np.maximum(self.filter.T @ self.domain / self.ne, 1e-12)
         c = problem.case
         nx, ny = c.nx, c.ny
 
@@ -160,6 +160,8 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
     """Compute actual converged OC labels; reject nonconverged cases, never fabricate."""
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    from time import perf_counter
+    started = perf_counter()
     records = []
     arrays = {k: [] for k in ("features", "targets", "nodal", "displacements",
                               "reference_compliance", "early_compliance")}
@@ -197,6 +199,7 @@ def generate_dataset(output, count=90, nx=16, ny=8, seed=17,
                         split=np.asarray([r["split"] for r in records]),
                         cases=np.asarray([json.dumps(r) for r in records]))
     manifest = {"requested": count, "usable": len(records), "failures": failures,
+                "generation_seconds": perf_counter() - started,
                 "seed": seed, "max_iter": max_iter, "tolerance": tolerance,
                 "feature_names": FEATURE_NAMES,
                 "ood_test": "held-out supports, load families, aspect ratios and central-hole geometry",
