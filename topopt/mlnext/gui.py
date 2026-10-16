@@ -108,6 +108,12 @@ EN = {
     "field_name": "Field", "sample_split": "Data partition",
     "validation": "validation", "test": "test",
     "trained": "Trained models", "inference": "Evaluation & comparison",
+    "fem_solves_label": "FEM solves", "online_seconds_label": "Online seconds",
+    "quality_label": "Quality gates", "fallbacks_label": "Fallbacks",
+    "early_field": "After five OC iterations", "optimized_field": "Optimized design",
+    "preview_too_big": "Preview unavailable for compressed datasets over 256 MiB.",
+    "cold_cg": "Conventional CG iterations", "warm_cg": "Neural-start CG iterations",
+    "faster_count": "Cases faster including inference",
 }
 RU = {
     "app": "Topology Lab", "subtitle": "Топологическая оптимизация · FEM · Научное ML",
@@ -186,6 +192,12 @@ RU = {
     "field_name": "Поле", "sample_split": "Часть датасета",
     "validation": "валидация", "test": "тест",
     "trained": "Обученные модели", "inference": "Проверка и сравнение",
+    "fem_solves_label": "Число FEM-решений", "online_seconds_label": "Время онлайн (с)",
+    "quality_label": "Пройдено проверок", "fallbacks_label": "Fallback",
+    "early_field": "После пяти итераций OC", "optimized_field": "Оптимизированная конструкция",
+    "preview_too_big": "Предпросмотр недоступен для сжатых датасетов более 256 МиБ.",
+    "cold_cg": "Итерации обычного CG", "warm_cg": "Итерации CG с нейросетевым стартом",
+    "faster_count": "Задач ускорено с учётом inference",
 }
 
 # Ensure translations cannot silently fall back to untranslated English.
@@ -329,7 +341,7 @@ def view_density(path):
     # NPZ does not support lazy slicing of compressed arrays. Keep browser
     # previews bounded even when the research dataset itself is much larger.
     if Path(path).stat().st_size > 256 * 1024 * 1024:
-        st.info("Field preview unavailable for files above 256 MiB.")
+        st.info(tr("preview_too_big"))
         return
     try:
         # Safe NPZ read (allow_pickle=False); do not deserialize checkpoints.
@@ -341,8 +353,9 @@ def view_density(path):
             if max_cases < 1:
                 return
             idx = st.slider(tr("case_index"), 0, max_cases - 1, 0)
-            field = st.radio(tr("field_name"), ["early", "optimized"], horizontal=True)
-            density = (early if field == "early" else targets)[idx]
+            field = st.radio(tr("field_name"), ["early_field", "optimized_field"],
+                             format_func=tr, horizontal=True)
+            density = (early if field == "early_field" else targets)[idx]
             st.caption(f"{tr('sample_split')}: {splits[idx]} · {density.shape[1]} × {density.shape[0]}")
             st.image(np.flipud(np.uint8(np.clip(density, 0, 1) * 255)),
                      clamp=True, width=680)
@@ -519,9 +532,9 @@ def summarize_metrics(data):
                 st.bar_chart(frame[cols])
     if "cases" in data and "mean_cold_iterations" in data:
         left, right = st.columns(2)
-        left.metric("Cold CG iterations", round(data["mean_cold_iterations"], 2))
-        right.metric("Neural CG iterations", round(data["mean_warm_iterations"], 2))
-        st.metric("Faster incl. inference", data.get("faster_including_inference", "—"))
+        left.metric(tr("cold_cg"), round(data["mean_cold_iterations"], 2))
+        right.metric(tr("warm_cg"), round(data["mean_warm_iterations"], 2))
+        st.metric(tr("faster_count"), data.get("faster_including_inference", "—"))
         if data.get("results"):
             st.dataframe(pd.DataFrame(data["results"]), hide_index=True)
     if "history" in data and isinstance(data["history"], list):
@@ -548,16 +561,16 @@ def historical():
     st.info(tr("legacy_notice"))
     values = json.loads(path.read_text(encoding="utf-8"))
     frame = pd.DataFrame({
-        name: {"FEM solves": info.get("mean_fe_solves"),
-               "Online seconds": info.get("mean_seconds"),
-               "Quality gates": info.get("final_gate_passes"),
-               "Fallbacks": info.get("fallbacks")}
+        name: {tr("fem_solves_label"): info.get("mean_fe_solves"),
+               tr("online_seconds_label"): info.get("mean_seconds"),
+               tr("quality_label"): info.get("final_gate_passes"),
+               tr("fallbacks_label"): info.get("fallbacks")}
         for name, info in values.items()
         if isinstance(info, dict)
     }).T
     st.dataframe(frame, use_container_width=True)
-    if "FEM solves" in frame:
-        st.bar_chart(frame[["FEM solves"]])
+    if tr("fem_solves_label") in frame:
+        st.bar_chart(frame[[tr("fem_solves_label")]])
     with st.expander(tr("raw_report")):
         st.json(values)
 
