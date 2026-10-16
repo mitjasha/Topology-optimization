@@ -11,16 +11,16 @@ GUI использует те же расчётные модули и архит
 
 В корневом каталоге репозитория, рекомендуется Python 3.12:
 
-\`\`\`bash
+```bash
 python -m venv .venv
 # Linux/macOS: source .venv/bin/activate
 # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements-gui.txt
 python -m streamlit run topopt/mlnext/gui.py
-\`\`\`
+```
 
 Интерфейс откроется в браузере. Если вкладка не открылась:
-\`http://localhost:8501\`.
+`http://localhost:8501`.
 
 Язык меняется через селектор **Language / Язык** в левой панели.
 
@@ -48,10 +48,10 @@ python -m streamlit run topopt/mlnext/gui.py
 ## Где лежат результаты
 
 Каждый запуск сохраняется в отдельной папке
-\`artifacts/mlnext/gui/<run-id>/\`. В ней находятся:
-\`run.json\` — статус и параметры, \`process.log\` — журнал,
-\`best.pt\` — обученные веса (если соответствующий этап завершён),
-\`training.json\`, \`comparison.csv\` и другие расчётные результаты.
+`artifacts/mlnext/gui/<run-id>/`. В ней находятся:
+`run.json` — статус и параметры, `process.log` — журнал,
+`best.pt` — обученные веса (если соответствующий этап завершён),
+`training.json`, `comparison.csv` и другие расчётные результаты.
 
 Расчётный процесс независим от окна браузера: можно закрыть вкладку
 и открыть её снова. Одновременно выполняется одна локальная задача;
