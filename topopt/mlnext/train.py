@@ -85,7 +85,7 @@ def prediction_from_network(model, feats, network, architecture, device):
 def train(dataset, architecture="unet", output="artifacts/mlnext/unet", *,
           epochs=400, patience=90, lr=.001, batch_size=8, seed=17,
           physics_weight=0.0, physics_every=10, device="cpu"):
-    if epochs < 1 or patience < 1 or batch_size < 1 or physics_every < 1:
+    if epochs < 1 or patience < 1 or batch_size < 1 or physics_every < 1 or lr <= 0:
         raise ValueError("Epochs, patience, batch size and physics_every must be positive")
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -251,12 +251,15 @@ if __name__ == "__main__":
     tr.add_argument("--epochs", type=int, default=400)
     tr.add_argument("--patience", type=int, default=90)
     tr.add_argument("--seed", type=int, default=17)
+    tr.add_argument("--lr", type=float, default=.001)
+    tr.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     tr.add_argument("--batch-size", type=int, default=8)
     tr.add_argument("--physics-weight", type=float, default=0.)
     tr.add_argument("--physics-every", type=int, default=10)
     ev = sub.add_parser("evaluate")
     ev.add_argument("--dataset", default="artifacts/mlnext/dataset.npz")
     ev.add_argument("--checkpoint", required=True)
+    ev.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     ev.add_argument("--output", default="artifacts/mlnext/evaluation.csv")
     args = parser.parse_args()
     if args.command == "train":
@@ -264,6 +267,8 @@ if __name__ == "__main__":
                               epochs=args.epochs, patience=args.patience,
                               batch_size=args.batch_size, seed=args.seed,
                               physics_weight=args.physics_weight,
-                              physics_every=args.physics_every), indent=2))
+                              physics_every=args.physics_every,
+                              lr=args.lr, device=args.device), indent=2))
     else:
-        print(json.dumps(evaluate(args.dataset, args.checkpoint, args.output), indent=2))
+        print(json.dumps(evaluate(args.dataset, args.checkpoint, args.output,
+                                  device=args.device), indent=2))
