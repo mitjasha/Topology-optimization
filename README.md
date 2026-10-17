@@ -42,7 +42,7 @@ The local application opens at **http://localhost:8501**. Select **English / Р�
 
 For Windows there is `run_topology_lab.cmd`; for Linux/macOS use `bash run_topology_lab.sh` after installing dependencies. The interface is intended for trusted local execution and does not provide public-server authentication.
 
-**Development branch:** the 2D/3D interface and newer ML tools are currently on [`feature/2d-3d-topology`](https://github.com/mitjasha/Topology-optimization/tree/feature/2d-3d-topology). Until this branch passes integration checks and is merged, use `git switch feature/2d-3d-topology` before installing the GUI. The default `master` branch retains the established 2D numerical baseline.
+The main development line is `master`; new algorithms and research studies are developed on feature branches and integrated after numerical verification.
 
 Documentation: [GUI — English](docs/GUI_EN.md) · [GUI — Русский](docs/GUI_RU.md) · [2D/3D guide — English](docs/2D_3D_EN.md) · [2D/3D — Русский](docs/2D_3D_RU.md) · [Scientific ML study protocol](docs/scientific-ml-roadmap.md).
 
