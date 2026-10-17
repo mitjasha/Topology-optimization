@@ -1,0 +1,58 @@
+name: Scientific ML integration
+on:
+  push:
+    branches:
+      - feature/scientific-ml-suite
+    paths:
+      - 'topopt/mlnext/**'
+      - 'scripts/mlnext_experiment.py'
+      - 'requirements-mlnext.txt'
+      - '.github/workflows/mlnext-integration.yml'
+  pull_request:
+    paths:
+      - 'topopt/mlnext/**'
+      - 'scripts/mlnext_experiment.py'
+      - 'requirements-mlnext.txt'
+      - '.github/workflows/mlnext-integration.yml'
+  workflow_dispatch:
+jobs:
+  small-end-to-end:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-mlnext.txt
+      - name: Generate independent FEM labels (coarse smoke dataset)
+        run: python -m topopt.mlnext.data --output artifacts/mlnext/dataset.npz --count 24 --nx 8 --ny 4 --max-iter 400
+      - name: Train supervised warm starts
+        shell: bash
+        run: |
+          set -e
+          for model in unet gnn fno learned_update; do
+            python -m topopt.mlnext.train train --dataset artifacts/mlnext/dataset.npz --model "$model" --output "artifacts/mlnext/$model" --epochs 3 --patience 4
+          done
+      - name: Physically regularized loss differentiates through FEM
+        run: python -m topopt.mlnext.train train --dataset artifacts/mlnext/dataset.npz --model unet --output artifacts/mlnext/unet_physics --epochs 2 --patience 3 --physics-weight 0.01 --physics-every 1
+      - name: Fair OC/Ridge/ML benchmark with strict evidence
+        shell: bash
+        run: |
+          python -m topopt.mlnext.comparison --dataset artifacts/mlnext/dataset.npz --output artifacts/mlnext/comparison.csv --checkpoint unet=artifacts/mlnext/unet/best.pt --checkpoint gnn=artifacts/mlnext/gnn/best.pt --checkpoint fno=artifacts/mlnext/fno/best.pt --checkpoint learned_update=artifacts/mlnext/learned_update/best.pt
+      - name: Train both conditional generators
+        shell: bash
+        run: |
+          python -m topopt.mlnext.diffusion train --dataset artifacts/mlnext/dataset.npz --output artifacts/mlnext/conv --model conv --epochs 2 --steps 4
+          python -m topopt.mlnext.diffusion train --dataset artifacts/mlnext/dataset.npz --output artifacts/mlnext/dit --model dit --epochs 2 --steps 4
+          python -m topopt.mlnext.diffusion evaluate --dataset artifacts/mlnext/dataset.npz --checkpoint artifacts/mlnext/dit/best.pt --output artifacts/mlnext/diffusion.csv --samples 2
+      - name: Train and audit neural-PCG warm start
+        shell: bash
+        run: |
+          python -m topopt.mlnext.fem_accel train --dataset artifacts/mlnext/dataset.npz --output artifacts/mlnext/fem --epochs 3
+          python -m topopt.mlnext.fem_accel evaluate --dataset artifacts/mlnext/dataset.npz --checkpoint artifacts/mlnext/fem/best.pt --output artifacts/mlnext/fem_eval.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scientific-ml-smoke
+          path: artifacts/mlnext/
