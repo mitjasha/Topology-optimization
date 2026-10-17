@@ -18,6 +18,32 @@ A reproducible CAE case study combining finite-element analysis, topology optimi
 
 [**Run on Windows**](RUN_WINDOWS_EN.md) · [**Инструкция на русском**](RUN_WINDOWS_RU.md) · [**Experiment protocol**](docs/development-v2.md) · [**Technical review**](docs/release-review-v2.md)
 
+## 2D + 3D structural topology optimization
+
+**[English guide](docs/2D_3D_EN.md) · [Русская документация](docs/2D_3D_RU.md)**
+
+Choose **Dimension / Размерность → 2D / 3D** in the bilingual Topology Lab GUI.
+
+The original 2D plane-stress Q4 FEM, Ridge/U-Net studies and historical
+`evidence_v2/` remain unchanged. A separate genuine **3D Hex8 FEM solver**
+implements full spatial elasticity, three translational degrees of freedom
+per node, density-filtered SIMP and shared OC optimization. Volumetric
+U-Net3D, FNO3D and voxel MeshGNN3D use independent 3D FEM datasets and
+a physically checked OC refinement benchmark with Ridge as baseline.
+The GUI includes interactive 3D density viewing and VTK export to ParaView.
+
+Quick standalone 3D FEM dataset and numerical checks:
+
+```bash
+python -m pytest mltests/test_3d.py -v
+python -m topopt.mlnext.data3d --output artifacts/mlnext/solid3d/dataset3d.npz --count 60 --nx 8 --ny 4 --nz 4
+```
+
+There are no claimed 3D ML improvements until comparable held-out
+benchmarks and numerical checks have been completed. 3D diffusion,
+stress-constrained design, arbitrary CAD geometry and neural-CG
+integration remain future work.
+
 ## Topology Lab — graphical research workbench
 
 **[English guide](docs/GUI_EN.md) · [Русская инструкция](docs/GUI_RU.md)**
