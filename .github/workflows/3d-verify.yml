@@ -1,0 +1,44 @@
+name: Hex8 3D topology verification
+on:
+  push:
+    paths:
+      - "topopt/solver3d.py"
+      - "topopt/mlnext/data3d.py"
+      - "topopt/mlnext/models3d.py"
+      - "topopt/mlnext/train3d.py"
+      - "topopt/mlnext/gui3d.py"
+      - "mltests/test_3d.py"
+      - ".github/workflows/3d-verify.yml"
+  pull_request:
+    paths:
+      - "topopt/solver3d.py"
+      - "topopt/mlnext/**"
+      - "mltests/test_3d.py"
+  workflow_dispatch:
+jobs:
+  numerical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scientific ML dependencies
+        run: python -m pip install -r requirements-mlnext.txt
+      - name: FEM, OC, ML and backward compatibility
+        run: python -m pytest mltests/test_3d.py -v
+      - name: Check 3D dataset, short volumetric network training, benchmark
+        shell: bash
+        run: |
+          set -e
+          python -m topopt.mlnext.data3d --output artifacts/mlnext/check3d/dataset3d.npz --count 12 --nx 4 --ny 4 --nz 4 --max-iter 400
+          for arch in unet3d gnn3d fno3d; do
+            python -m topopt.mlnext.train3d train --dataset artifacts/mlnext/check3d/dataset3d.npz --model "$arch" --output "artifacts/mlnext/check3d/$arch" --epochs 2 --patience 3 --batch-size 2
+          done
+          python -m topopt.mlnext.train3d evaluate --dataset artifacts/mlnext/check3d/dataset3d.npz --output artifacts/mlnext/check3d/comparison3d.csv --checkpoint unet3d=artifacts/mlnext/check3d/unet3d/best.pt --checkpoint gnn3d=artifacts/mlnext/check3d/gnn3d/best.pt --checkpoint fno3d=artifacts/mlnext/check3d/fno3d/best.pt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hex8-3d-evidence
+          path: artifacts/mlnext/check3d/
