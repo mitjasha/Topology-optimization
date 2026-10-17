@@ -28,6 +28,7 @@ SAFE_MODULES = frozenset({
     "topopt.mlnext.fem_accel",
     "topopt.mlnext.data3d",
     "topopt.mlnext.train3d",
+    "topopt.mlnext.case_run",
 })
 TRAINABLE = ("unet", "gnn", "fno", "learned_update")
 GENERATIVE = ("conv", "dit")
@@ -382,8 +383,8 @@ def datasets3d():
 def dataset_task3d(folder, *, count=24, nx=8, ny=4, nz=4, seed=17, max_iter=400):
     if not 12 <= count <= 100000:
         raise ValueError("3D dataset case count must be between 12 and 100000")
-    if min(nx, ny, nz) < 4 or nx*ny*nz > 8192:
-        raise ValueError("3D mesh dimensions >=4 and at most 8192 Hex8 elements")
+    if min(nx, ny, nz) < 4 or nx*ny*nz > 2048:
+        raise ValueError("3D mesh dimensions >=4 and at most 2048 Hex8 elements")
     if not 15 <= max_iter <= 10000:
         raise ValueError("Invalid FEM optimization iteration limit")
     return [PYTHON, "-m", "topopt.mlnext.data3d",
@@ -438,3 +439,28 @@ def make_study3d(dataset, folder, architectures, *, seeds=(17,),
                       comparison_task3d(dataset,Path(folder)/f"seed_{int(seed)}"/
                                         "comparison3d.csv",cp)))
     return steps
+
+
+def single_case_task(folder, dimension, *, nx, ny, nz=4, length=2.,
+                     width=1., height=1., volume=.5,
+                     load_y=.5, load_z=.5, radius=.38,
+                     max_iter=400,tolerance=.02):
+    if dimension not in (2,3):
+        raise ValueError("Only 2D and 3D are supported")
+    if min(nx,ny) < 2 or (dimension==3 and (nz<2 or nx*ny*nz>2048)):
+        raise ValueError("Invalid 2D/3D mesh; 3D GUI permits at most 2048 elements")
+    if dimension==2 and nx*ny>32768:
+        raise ValueError("2D GUI permits at most 32768 elements")
+    if not 0<volume<1 or not 0<load_y<1 or not 0<load_z<1:
+        raise ValueError("Invalid density fraction or load position")
+    if not 15 <= max_iter <= 10000 or tolerance<=0:
+        raise ValueError("Invalid OC tolerance/iteration limit")
+    cmd=[PYTHON,"-m","topopt.mlnext.case_run",
+         "--output",_strpath(folder),"--dimension",str(dimension),
+         "--nx",str(int(nx)),"--ny",str(int(ny)),"--nz",str(int(nz)),
+         "--length",str(float(length)),"--width",str(float(width)),
+         "--height",str(float(height)),"--volume",str(float(volume)),
+         "--load-y",str(float(load_y)),"--load-z",str(float(load_z)),
+         "--radius",str(float(radius)),"--max-iter",str(int(max_iter)),
+         "--tolerance",str(float(tolerance))]
+    return cmd
