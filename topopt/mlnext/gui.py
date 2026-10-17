@@ -34,7 +34,7 @@ st.set_page_config(
 
 EN = {
     "app": "Topology Lab", "subtitle": "Topology optimization · FEM · Scientific ML",
-    "language": "Language", "nav": "Workspace", "dimension": "Dimension", "overview": "Overview",
+    "language": "Language", "nav": "Workspace", "dimension": "Dimension", "solver": "Single-case solver", "overview": "Overview",
     "dataset": "Datasets", "train": "Training", "study": "Comparative study",
     "generative": "Generative design", "fem": "Neural FEM",
     "analysis": "Results & analysis", "runs": "Runs & logs",
@@ -117,7 +117,7 @@ EN = {
 }
 RU = {
     "app": "Topology Lab", "subtitle": "Топологическая оптимизация · FEM · Научное ML",
-    "language": "Язык", "nav": "Рабочая область", "dimension": "Размерность", "overview": "Обзор",
+    "language": "Язык", "nav": "Рабочая область", "dimension": "Размерность", "solver": "Расчёт одной конструкции", "overview": "Обзор",
     "dataset": "Датасеты", "train": "Обучение", "study": "Сравнение моделей",
     "generative": "Генеративный дизайн", "fem": "Нейросетевой FEM",
     "analysis": "Результаты и анализ", "runs": "Запуски и журналы",
@@ -696,9 +696,9 @@ with st.sidebar:
     dimension = st.radio(tr("dimension"), ("2D", "3D"), horizontal=True,
                          key="dimension_selector")
     if dimension == "3D":
-        pages = ("overview", "dataset", "train", "study", "analysis", "runs")
+        pages = ("overview", "solver", "dataset", "train", "study", "analysis", "runs")
     else:
-        pages = ("overview", "dataset", "train", "study", "generative", "fem", "analysis", "runs")
+        pages = ("overview", "solver", "dataset", "train", "study", "generative", "fem", "analysis", "runs")
     current_page = st.radio(tr("nav"), pages, format_func=tr,
                             label_visibility="collapsed", key="navigation")
     st.divider()
@@ -712,7 +712,10 @@ with st.sidebar:
 
 st.title(tr("app") + " · " + dimension)
 st.caption(tr("subtitle"))
-if dimension == "3D" and current_page != "runs":
+if current_page == "solver":
+    from topopt.mlnext.gui_solver import render as render_solver
+    render_solver(dimension, st.session_state.lang)
+elif dimension == "3D" and current_page != "runs":
     from topopt.mlnext.gui3d import render
     render(current_page, language=st.session_state.lang)
 else:
