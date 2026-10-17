@@ -8,6 +8,9 @@ on:
       - "topopt/mlnext/train3d.py"
       - "topopt/mlnext/gui3d.py"
       - "mltests/test_3d.py"
+      - "mltests/test_3d_gui.py"
+      - "topopt/mlnext/gui_solver.py"
+      - "topopt/mlnext/case_run.py"
       - ".github/workflows/3d-verify.yml"
   pull_request:
     paths:
@@ -27,7 +30,7 @@ jobs:
       - name: Install scientific ML dependencies
         run: python -m pip install -r requirements-mlnext.txt
       - name: FEM, OC, ML and backward compatibility
-        run: python -m pytest mltests/test_3d.py -v
+        run: python -m pytest mltests/test_3d.py mltests/test_3d_gui.py -v
       - name: Check 3D dataset, short volumetric network training, benchmark
         shell: bash
         run: |
