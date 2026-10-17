@@ -1,163 +1,134 @@
-# Topology optimization · FEM + machine learning
+# Topology Lab
+
+**Open-source structural topology optimization, finite-element analysis and scientific machine learning**
 
 [![Numerical verification](https://github.com/mitjasha/Topology-optimization/actions/workflows/verify.yml/badge.svg?branch=master)](https://github.com/mitjasha/Topology-optimization/actions/workflows/verify.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Can a learned warm start reduce optimization effort without sacrificing structural performance?**
+Topology Lab develops reproducible numerical methods for material distribution in elastic structures. The project brings together finite-element analysis (FEA), density-based topology optimization, trainable surrogate models and physics-checked numerical experiments. It supports classical optimization and investigates when machine learning can reduce the *complete cost* of obtaining an acceptable structural solution.
 
-A reproducible CAE case study combining finite-element analysis, topology optimization and physics-checked machine learning. Start with the numerical evidence, inspect the assumptions, then reproduce the experiment on a CPU.
+The software and its experimental protocols evolve independently. Numerical assumptions, failure conditions, reproducible results and known limitations are part of the engineering method, not afterthoughts.
 
-| Continuous-density reference | Projected binary candidate |
-|:---:|:---:|
-| ![Continuous-density cantilever, 48 by 24 elements](mesh_study/mesh_48x24_continuous.svg) | ![Projected binary cantilever, 64 by 32 elements](evidence_v2/refinement/binary_64.svg) |
-| Filtered SIMP, 50% material | Projection continuation, 50% material |
+**Current development focus:** extending the established 2D workflow to volumetric 3D FEM; developing comparable Ridge, U-Net, graph and Fourier-operator baselines; and measuring end-to-end efficiency under physical acceptance gates.
 
-*Two separate studies, with different meshes and optimization settings. These images illustrate the workflow; they are not a controlled before/after comparison or manufactured parts.*
+## Capabilities
 
-**Early FEM iterations → ridge / U-Net prediction → FEM checks → OC refinement → acceptance or full-solve fallback**
+| Area | 2D | 3D |
+|---|---|---|
+| Linear elasticity | Q4, plane stress, 2 DOF/node | Hex8, spatial elasticity, 3 DOF/node |
+| Structural optimization | SIMP, density filtering, optimality criteria (OC) | SIMP, density filtering, shared OC |
+| Finite-element backend | Sparse SciPy; dense reference for small systems | Sparse SciPy |
+| Individual engineering case | GUI and CLI, configurable mesh/load/volume | GUI and CLI, configurable box dimensions/mesh/load/volume |
+| Dataset generation | FEM labels, train/validation/held-out test | FEM labels, volumetric fields, held-out aspect ratios/load positions |
+| Learning models | Ridge, residual U-Net, grid GNN, FNO, learned update | Ridge, U-Net3D, voxel GNN, FNO3D |
+| Other experimental learning | Diffusion / DiT, neural FEM initial guesses, differentiable compliance | Extension under investigation |
+| Visualization | Density plots and convergence history | Volume view, Z slices, ParaView VTK |
+| Research workflow | Bilingual local GUI, training/evaluation, process logs, saved outputs | Same GUI with 2D/3D selector |
 
-[**Run on Windows**](RUN_WINDOWS_EN.md) · [**Инструкция на русском**](RUN_WINDOWS_RU.md) · [**Experiment protocol**](docs/development-v2.md) · [**Technical review**](docs/release-review-v2.md)
+The 3D implementation currently targets a **rectangular, left-clamped cantilever**, with a force acting on the right face. It is an actual Hex8 3D elasticity formulation, not an extrusion of 2D plane-stress results. Support for arbitrary CAD geometries, unstructured meshes, stress and buckling constraints, and industrial-scale solvers is ongoing work.
 
-## 2D + 3D structural topology optimization
+## Install and run
 
-**[English guide](docs/2D_3D_EN.md) · [Русская документация](docs/2D_3D_RU.md)**
-
-Choose **Dimension / Размерность → 2D / 3D** in the bilingual Topology Lab GUI.
-
-The original 2D plane-stress Q4 FEM, Ridge/U-Net studies and historical
-`evidence_v2/` remain unchanged. A separate genuine **3D Hex8 FEM solver**
-implements full spatial elasticity, three translational degrees of freedom
-per node, density-filtered SIMP and shared OC optimization. Volumetric
-U-Net3D, FNO3D and voxel MeshGNN3D use independent 3D FEM datasets and
-a physically checked OC refinement benchmark with Ridge as baseline.
-The GUI includes interactive 3D density viewing and VTK export to ParaView.
-
-Quick standalone 3D FEM dataset and numerical checks:
+Use Python 3.12. Create a virtual environment if possible.
 
 ```bash
-python -m pytest mltests/test_3d.py -v
-python -m topopt.mlnext.data3d --output artifacts/mlnext/solid3d/dataset3d.npz --count 60 --nx 8 --ny 4 --nz 4
-```
-
-There are no claimed 3D ML improvements until comparable held-out
-benchmarks and numerical checks have been completed. 3D diffusion,
-stress-constrained design, arbitrary CAD geometry and neural-CG
-integration remain future work.
-
-## Topology Lab — graphical research workbench
-
-**[English guide](docs/GUI_EN.md) · [Русская инструкция](docs/GUI_RU.md)**
-
-An optional local Streamlit application provides English/Russian navigation, dataset
-generation, supervised and diffusion-model training, multi-seed comparative studies,
-neural FEM evaluation, live job logs, and interactive analysis of actual results.
-CLI tools and frozen numerical baselines remain independently usable.
-
-```bash
+git clone https://github.com/mitjasha/Topology-optimization.git
+cd Topology-optimization
 python -m pip install -r requirements-gui.txt
 python -m streamlit run topopt/mlnext/gui.py
 ```
 
-Alternatively start `run_topology_lab.cmd` (Windows) or
-`bash run_topology_lab.sh` (Linux/macOS) after installing GUI dependencies.
-The app runs locally at `http://localhost:8501` and is not intended for
-public network exposure. Heavy model training has not been performed by adding this UI.
+The local application opens at **http://localhost:8501**. Select **English / Русский** and **2D / 3D** in the sidebar.
 
+For Windows there is `run_topology_lab.cmd`; for Linux/macOS use `bash run_topology_lab.sh` after installing dependencies. The interface is intended for trusted local execution and does not provide public-server authentication.
 
-## Scientific ML research track (experimental)
+**Development branch:** the 2D/3D interface and newer ML tools are currently on [`feature/2d-3d-topology`](https://github.com/mitjasha/Topology-optimization/tree/feature/2d-3d-topology). Until this branch passes integration checks and is merged, use `git switch feature/2d-3d-topology` before installing the GUI. The default `master` branch retains the established 2D numerical baseline.
 
-A separately reproducible [Scientific ML Suite](docs/scientific-ml-roadmap.md)
-extends the existing numerical optimizer without replacing its verified Ridge/U-Net evidence.
-The suite includes BC/geometry-conditioned residual U-Net, graph message passing,
-Fourier neural operators, a differentiable compliance-based loss, learned density
-updates, a neural initial guess for Jacobi-preconditioned FEM-CG, and conditional
-diffusion/transformer design sampling.
+Documentation: [GUI — English](docs/GUI_EN.md) · [GUI — Русский](docs/GUI_RU.md) · [2D/3D guide — English](docs/2D_3D_EN.md) · [2D/3D — Русский](docs/2D_3D_RU.md) · [Scientific ML study protocol](docs/scientific-ml-roadmap.md).
 
-Start with `python -m pip install -r requirements-mlnext.txt`,
-`python -m pytest mltests/test_mlnext.py -v`, and
-`python scripts/mlnext_experiment.py --quick --dry-run`.
-No improvement beyond the previously published Ridge/U-Net benchmark is claimed
-until held-out, physics-gated comparisons finish. The research workflow and its
-limitations are documented separately from the historical evidence.
-
-## Results at a glance
-
-The extended learning experiment uses **84 cases: 48 training, 12 validation and 24 held-out test cases**. The test family has a new rectangular aspect ratio, L/H = 2.5; all cases retain cantilever supports. Three network initialization seeds and three timing repeats give 216 evaluations per method, not 216 independent test problems.
-
-| Method | Mean FEM solves per test run | Final quality gate |
-|---|---:|---:|
-| Uniform-start OC | 48.25 | 216 / 216 |
-| Ridge warm start + OC | **27.00** | 216 / 216 |
-| Small U-Net warm start + OC | 36.28 | 216 / 216 |
-
-**Engineering decision:** retain ridge as the stronger baseline in this experiment. It uses about **44% fewer online FEM solves** than uniform-start OC; U-Net uses about **25% fewer**. These counts include early iterations, checks and refinement. Offline label generation and training are separate costs. Short CPU timings do not establish an industrial speedup.
-
-Source: [per-run results](evidence_v2/families/results.csv), [summary](evidence_v2/families/summary.json), [split, settings and provenance](evidence_v2/families/manifest.json).
-
-## What has been verified?
-
-| Engineering question | Evidence and conclusion |
-|---|---|
-| Does the numerical implementation behave consistently? | 31 tests cover equilibrium, energy, sensitivities, dense/sparse agreement, projection gradients, split isolation and failed acceptance gates. The optional network test requires PyTorch. |
-| Does another solver agree? | CalculiX binary comparisons at thickness 0.001 differ in compliance by about 0.175% and 0.083%. All eight runs at thickness 0.001 and 0.0001 pass; two of twelve total comparisons fail at thickness 0.01. [Evidence](evidence_v2/binary_correlation/summary.json). |
-| Are the results mesh independent? | **Not yet.** Frozen-field compliance still changes 2.387% at the final refinement to 128×64. [Study](evidence_v2/refinement/summary.json). |
-| Can a binary candidate pass the defined checks? | Two projected candidates pass volume, compliance, connectivity and void-stiffness sensitivity gates. This does not establish manufacturability. [Protocol](docs/development-v2.md). |
-| What happens when a prediction fails? | The extended benchmark executes and counts a full uniform-start solve when the runtime gate fails. The decision uses quantities available at runtime, not the held-out reference solution. |
-
-This is a **research demonstrator** for linear plane-stress elasticity. Stress limits, buckling, fatigue, manufacturing constraints and industrial qualification are outside the demonstrated scope. Independent solver correlation is numerical verification, not experimental validation.
-
-## Reproduce in a few commands
-
-Use Python 3.12. The core workflow needs NumPy and SciPy; it requires no GPU, solver license or historical dataset.
-
-```powershell
-git clone https://github.com/mitjasha/Topology-optimization.git
-cd Topology-optimization
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-reproduce.txt
-.\run_checks.cmd
-```
-
-Open `my_results/report.html` and `my_mesh_study/report.html` locally. The quick workflow runs tests, the strict 24-case ridge benchmark and the foundation mesh/binary study. It does **not** run the extended U-Net or external CalculiX experiments. For those, follow [the extended experiment commands](docs/development-v2.md); PyTorch and CalculiX are optional additional dependencies.
-
-On Linux/macOS, create and activate a Python 3.12 virtual environment, then:
+### Numerical case without the GUI
 
 ```bash
-python -m pip install -r requirements-reproduce.txt
-python -m topopt.evidence --output my_results
-python -m topopt.mesh_study --output my_mesh_study
+# Full 3D Hex8 FEM + SIMP optimization; writes densities, compliance history and VTK.
+python -m topopt.mlnext.case_run --dimension 3 --nx 8 --ny 4 --nz 4 --volume .5 --output artifacts/mlnext/example3d
+
+# Retain the 2D plane-stress workflow.
+python -m topopt.mlnext.case_run --dimension 2 --nx 16 --ny 8 --volume .5 --output artifacts/mlnext/example2d
 ```
 
-GitHub Actions runs the core numerical verification on Windows and Linux. HTML reports must be opened locally; GitHub displays their source.
+These modest meshes are suitable for initial numerical and workflow checks, not for mesh-independent structural design.
 
-## Engineering approach
+## Numerical evidence and baseline results
 
-- **Mechanics:** bilinear Q4 elements, 2×2 Gauss integration, small-displacement isotropic plane stress, nondimensional E = 1 and unit thickness.
-- **Optimization:** minimum compliance, SIMP penalization, physical density filtering and OC updates; smooth projection continuation for the extended binary study.
-- **Implementation:** dense NumPy reference and sparse SciPy stiffness/filter backends, with comparison tests.
-- **Learning:** ridge and a small CPU U-Net; validation-based selection, grouped splits and a held-out aspect-ratio family.
-- **Acceptance:** convergence, physical volume, equilibrium and compliance; explicit fallback costs and preserved failures.
-- **Traceability:** datasets, split IDs, model weights, source snapshots, hashes, solver decks and per-run results.
+The established 2D learning study comprises **84 cases (48 train, 12 validation, 24 held-out test)** and compares uniform-start OC with supervised warm starts. The 24 test problems were evaluated with three network seeds and three timing repeats; 216 evaluations per method do **not** represent 216 distinct cases.
 
-The case study demonstrates engineering judgment through model assumptions, measurable acceptance criteria, comparison with a simpler baseline and explicit limits on release readiness.
+| 2D method | Mean FEM solutions per test evaluation | Final quality gates |
+|---|---:|---:|
+| Uniform-start OC | 48.25 | 216 / 216 |
+| Ridge + FEM/OC refinement | **27.00** | 216 / 216 |
+| Small U-Net + FEM/OC refinement | 36.28 | 216 / 216 |
 
-## Explore the repository
+Within **this specific test distribution**, the Ridge warm start required approximately 44% fewer online FEM solves than uniform OC, while the small U-Net used approximately 25% fewer. These figures do not establish superiority for general structures or in 3D; offline data generation and model training are separate costs.
 
-| Path | Contents |
+Sources: [per-run measurements](evidence_v2/families/results.csv) · [summary](evidence_v2/families/summary.json) · [splits and provenance](evidence_v2/families/manifest.json).
+
+Other verified and unresolved aspects:
+
+- Classical numerical tests cover equilibrium, energy, sensitivity gradients, dense/sparse consistency and failed acceptance conditions.
+- CalculiX comparisons for the earlier 2D foundation show good agreement for the thinnest studied cases and documented discrepancies at thicker settings: [independent solver study](evidence_v2/binary_correlation/summary.json).
+- Mesh-independent performance **has not yet been established**: the earlier refinement study still finds non-negligible changes in compliance at its final mesh level: [refinement evidence](evidence_v2/refinement/summary.json).
+- 3D neural performance is **not yet established**. Volumetric architecture implementations, dataset generation and verification tests need successful independent integration runs and mesh studies.
+
+The acceptance pipeline requires FEM equilibrium, volume compliance, optimizer convergence and engineering-quality checks. Any learned initialization may be rejected and replaced by a conventional solve, with that cost reported. Numerical solver correlation is not experimental validation.
+
+## Scientific ML studies
+
+The research code includes conditioned residual U-Net models, mesh-neighbor graph learning, Fourier neural operators, physics-aware losses, trainable density updates, neural initial guesses for iterative FEM and conditional generative models.
+
+The relevant research question is not whether a network makes a visually plausible shape: it is **under which conditions an ML-assisted process is faster, sufficiently accurate, reproducible and robust relative to classical optimization and numerical solution methods.**
+
+Comparisons should be controlled for mesh, boundary conditions, held-out test family, optimizer stopping criteria, number of FEM solves, inference cost, training cost and failure/recovery rate. Results are retained even when an ML approach does not improve the baseline.
+
+Start with:
+
+```bash
+python -m pip install -r requirements-mlnext.txt
+python -m pytest mltests/test_mlnext.py mltests/test_3d.py -v
+python scripts/mlnext_experiment.py --quick --dry-run
+```
+
+The `--quick` profile is only a small end-to-end engineering check; it is not a performance study. Large independent 2D/3D experiments and multi-seed analyses are planned and documented in [the research protocol](docs/scientific-ml-roadmap.md).
+
+## Architecture and repository
+
+| Path | Purpose |
 |---|---|
-| [topopt/](topopt) | FEM, optimization, learning and verification code |
-| [tests/](tests) | Numerical and workflow regression tests |
-| [evidence_v2/](evidence_v2) | Extended experiments and frozen source snapshots |
-| [results/](results), [mesh_study/](mesh_study), [correlation/](correlation) | Preserved foundation evidence; distinct from the extended runs |
-| [Engineering specification](docs/engineering-spec.md) | Foundation assumptions and acceptance criteria |
-| [Development protocol](docs/development-v2.md) | Extended methods, commands and limitations |
-| [Historical notebook review](docs/legacy-review.md) | Context and reproducibility limits of the 2019 work |
-| [English historical notebook](20190505_Shakhrai_DS_Topology_Optimization.en.ipynb) | Translated companion to the unchanged original |
+| [`topopt/solver.py`](topopt/solver.py) | Established Q4 FEM, filtering, SIMP and OC optimization |
+| [`topopt/solver3d.py`](topopt/solver3d.py) | Volumetric Hex8 finite-element implementation |
+| [`topopt/mlnext/`](topopt/mlnext) | Scientific ML architectures, dataset tools, training, validation and GUI |
+| [`tests/`](tests) and [`mltests/`](mltests) | Foundation and optional neural/numerical regression checks |
+| [`evidence_v2/`](evidence_v2) | Preserved experimental evidence and provenance |
+| [`docs/`](docs) | Model assumptions, validation methods and future research questions |
+| [`results/`](results), [`mesh_study/`](mesh_study), [`correlation/`](correlation) | Earlier numerical studies, retained as historical baselines |
 
-## Historical work and attribution
+Computed experiment outputs belong under `artifacts/` and are not treated as proof of a model improvement without independent checks.
 
-The original [2019 notebook](20190505_Shakhrai_DS_Topology_Optimization.ipynb) is preserved unchanged. It explores U-Net, LinkNet and transfer learning on 32×32 density fields. The original `libtopology`, `X.npz` and trained checkpoints are not present in the public repository as inspected on 2026-10-13. The new solver and dataset must not be represented as recovered historical artifacts.
+## Development directions
 
-Methodological reference: Andreassen et al., *Efficient topology optimization in MATLAB using 88 lines of code* (2011), [DTU project page](https://www.topopt.mek.dtu.dk/apps-and-software/efficient-topology-optimization-in-matlab). The current FEM code is independently implemented using isoparametric integration; the referenced MATLAB source is not bundled or copied. SIMP, density filtering and OC are established methods, not original inventions of this project.
+- **Numerical verification:** energy, force/reaction equilibrium, sensitivity gradients, mesh convergence and independent FEM correlation.
+- **Structural models:** extended supports, multiple and distributed loads, arbitrary design domains, external mesh exchange, stress and vibration objectives, and manufacturing constraints.
+- **Scalability:** iterative solvers, preconditioning, sparse assembly optimizations and larger volumetric discretizations.
+- **Scientific ML:** data efficiency, out-of-distribution transfer, mesh-conditioned graph/operator learning, learned FEM acceleration and 3D generative optimization.
+- **Reproducibility and usability:** experiment manifests, comparable multi-seed benchmarks, diagnostics, bilingual GUI and explicit model limitations.
 
-The foundation code/documentation was prepared with AI assistance and reviewed using the included numerical checks. The owner should review and understand the implementation before presenting it as portfolio work. Original project software and documentation are licensed under MIT; see LICENSE and NOTICE for third-party material.
+Contributions are welcome when supported by clear numerical tests, documented assumptions and reproducible results. Proposed functionality and known limitations are tracked in the documentation and future development work.
+
+## Origins, methods and attribution
+
+The original [2019 notebook](20190505_Shakhrai_DS_Topology_Optimization.ipynb) is preserved with its historical context and limitations. It explored image-based neural architectures. The current Q4/Hex8 solvers and generated datasets are independent later implementations, not restored versions of unavailable historical dependencies.
+
+Density-based topology optimization, SIMP and OC are established numerical methods. A methodological reference is Andreassen et al., *Efficient topology optimization in MATLAB using 88 lines of code* (2011), [DTU project page](https://www.topopt.mek.dtu.dk/apps-and-software/efficient-topology-optimization-in-matlab).
+
+Engineering code and documentation were developed with AI assistance and require the same numerical scrutiny, code review and independent replication as any other research contribution.
+
+Licensed under MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for attribution and third-party material.
