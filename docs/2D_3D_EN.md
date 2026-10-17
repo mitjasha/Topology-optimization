@@ -13,6 +13,18 @@ that use the **same OC topology-optimization algorithm**.
 | Visualization | 2D field | Interactive 3D cells, density threshold, Z slice and VTK |
 | Data | Historical 2D NPZ/CSV | Independent 3D NPZ/CSV/JSON and ParaView VTK |
 
+## Solve an individual 2D or 3D engineering case
+
+Both dimensions have a **Single-case solver** GUI page. Set the mesh,
+geometry, volume fraction, load position and filter radius. The
+calculation writes a numerical quality report, density field and
+convergence history; 3D cases additionally export a ParaView VTK.
+
+```bash
+python -m topopt.mlnext.case_run --dimension 3 --nx 8 --ny 4 --nz 4 --volume .5 --output artifacts/mlnext/manual3d
+python -m topopt.mlnext.case_run --dimension 2 --nx 16 --ny 8 --volume .5 --output artifacts/mlnext/manual2d
+```
+
 Run the local bilingual GUI:
 
 ```bash
